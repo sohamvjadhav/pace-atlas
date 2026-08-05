@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="PACE Atlas" width="100%">
+  <img src="https://raw.githubusercontent.com/sohamvjadhav/pace-atlas/main/assets/banner.png?v=2" alt="PACE Atlas" width="100%">
 </p>
 
 # Hermes Agent ☤
