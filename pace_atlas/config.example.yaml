@@ -1,0 +1,67 @@
+# PACE Atlas configuration
+# Copy to ~/.pace/config.yaml (or run: pace atlas install) and edit.
+
+server_name: "my-server"
+
+# Seconds between monitoring cycles (default 300 = 5 minutes)
+check_interval: 300
+
+# --- Alert thresholds (hard rules) ---
+hard_rules:
+  disk_threshold: 95          # % disk usage that triggers an alert
+  memory_threshold: 95        # % memory usage
+  cpu_threshold: 95           # % CPU (sustained)
+  cpu_duration_minutes: 5
+  ssh_threshold: 10           # failed SSH attempts in the window
+  ssh_window_minutes: 10
+  billing_threshold: 50       # billed spend spike, percent
+
+# --- LLM analysis (optional) ---
+# Provider is auto-detected from GROQ_API_KEY / OPENAI_API_KEY /
+# ANTHROPIC_API_KEY (env or ~/.pace/.env). Set them explicitly here to
+# override. Leave api_key unset — it is never written to this file.
+llm:
+  provider: null              # "groq" | "openai" | "anthropic"
+  model: null                 # e.g. "llama-3.3-70b-versatile"
+  base_url: null              # set to talk to a self-hosted endpoint
+
+# --- Notifications ---
+# Available channels: console, file, webhook, telegram, email
+notifications:
+  channels:
+    - console                 # always log to stdout
+    - file                    # append to ~/.pace/alerts.log
+    # - telegram
+    # - webhook
+    # - email
+
+  file:
+    path: "~/.pace/alerts.log"
+
+  # Telegram: create a bot with @BotFather, get the token, and use your
+  # numeric chat_id (the bot must be able to message you).
+  telegram:
+    bot_token: null
+    chat_id: null
+
+  # Generic webhook — receives {"title": ..., "text": ...} JSON.
+  webhook:
+    url: null
+
+  # SMTP email. Uses STARTTLS on port 587 unless tls: false.
+  email:
+    host: null
+    port: 587
+    tls: true
+    ssl: false
+    username: null
+    password: null
+    from: null                # defaults to username
+    to: []                    # recipient list
+
+# --- Alert behaviour ---
+alerts:
+  history_file: "~/.pace/history.jsonl"
+  dedupe_window_seconds: 300  # suppress identical alerts within this window
+  suppress_repeats: true
+  max_history_entries: 5000

@@ -1,375 +1,341 @@
 """
 PACE Atlas — Main Runner
 
-The main entry point for PACE Atlas monitoring agent.
+The resident monitoring agent. Each cycle:
+
+1. Collects telemetry (system, memory, disk, network, process, security,
+   cloud, logs)
+2. Records metrics to a persistent history ledger (trends across restarts)
+3. Runs hard rules, then the LLM decision layer when configured
+4. Runs full capabilities analysis (security, cost, predictive) and folds
+   the insights into the alert
+5. Suppresses repeat alerts within the dedupe window (alert fatigue control)
+6. Delivers via the configured notification channels
 
 Usage:
-    python -m pace_atlas.runner              # Run once
-    python -m pace_atlas.runner --daemon    # Run continuously
-    python -m pace_atlas.runner --daemon --interval 300  # Every 5 minutes
-
-Author: PACE Atlas
-Version: 0.1.0
+    python -m pace_atlas.runner [-c FILE]             # run once
+    python -m pace_atlas.runner --daemon              # run continuously
+    python -m pace_atlas.runner --daemon --interval 300
+    python -m pace_atlas.runner --install            # write ~/.pace/config.yaml
+    python -m pace_atlas.runner --install-systemd    # install a user systemd unit
+    python -m pace_atlas.runner --status             # health/status summary
 """
 
 import argparse
 import logging
 import os
+import signal
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# Setup path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from pace_atlas import config as atlas_config
+from pace_atlas.alert_engine import AlertDecision, AlertEngine
+from pace_atlas.capabilities import AtlasCapabilities
+from pace_atlas.feedback import FeedbackLearning
+from pace_atlas.history import AtlasHistory
+from pace_atlas.notify import NotificationManager
 from pace_atlas.telemetry import (
+    CloudCollector,
     CompositeCollector,
-    SystemCollector,
-    MemoryCollector,
     DiskCollector,
+    LogAggregator,
+    MemoryCollector,
     NetworkCollector,
     ProcessCollector,
     SecurityCollector,
-    CloudCollector,
-    LogAggregator,
+    SystemCollector,
 )
-from pace_atlas.alert_engine import AlertEngine, AlertDecision
-from pace_atlas.feedback import FeedbackLearning
 
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [PACE Atlas] %(levelname)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 logger = logging.getLogger(__name__)
+PYTHON = sys.executable
 
 
 class PACEAtlas:
-    """
-    Main PACE Atlas agent class.
+    """Resident SRE agent orchestrating telemetry, analysis, and delivery."""
 
-    Orchestrates telemetry collection, alert decisions, and notifications.
-    """
+    def __init__(self, config: Optional[dict] = None):
+        self.config = dict(config) if config else {}
+        self.home = atlas_config.pace_home()
+        self.home.mkdir(parents=True, exist_ok=True)
 
-    def __init__(self, config: dict | None = None):
-        """
-        Initialize PACE Atlas.
-
-        Args:
-            config: Optional configuration dict
-        """
-        self.config = config or {}
-
-        # Setup directories
-        self.config_dir = Path(os.environ.get("PACE_HOME", Path.home() / ".pace"))
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-
-        # Initialize components
         self.collector = self._setup_collector()
-        self.alert_engine = AlertEngine(self.config.get("alert_config", {}))
-        self.feedback = FeedbackLearning(str(self.config_dir))
-
-        # Connect feedback to alert engine
+        self.alert_engine = AlertEngine({"hard_rules": self.config.get("hard_rules", {})})
+        self.feedback = FeedbackLearning(str(self.home))
         self.alert_engine.set_feedback(self.feedback)
 
-        # Setup LLM client if configured
+        self.capabilities = AtlasCapabilities(str(self.home))
         self.llm_client = self._setup_llm_client()
         if self.llm_client:
             self.alert_engine.set_llm_client(self.llm_client)
 
-        # Notification channels
-        self.notification_handler = self._setup_notifications()
+        alerts_cfg = self.config.get("alerts", {})
+        history_path = alerts_cfg.get("history_file") or str(self.home / "history.jsonl")
+        self.history = AtlasHistory(
+            Path(history_path).expanduser(),
+            max_entries=alerts_cfg.get("max_history_entries", 5000),
+        )
+        self.dedupe_window = alerts_cfg.get("dedupe_window_seconds", 300)
+        self.suppress_repeats = alerts_cfg.get("suppress_repeats", True)
 
-        # State
-        self.last_alert_time: Optional[datetime] = None
+        self.notifier = NotificationManager.from_config(self.config)
         self.server_name = self.config.get("server_name", "server")
+        self._running = True
+        self.last_alert_at: Optional[datetime] = None
+        logger.info("PACE Atlas initialized for %s (%d notifier channels)", self.server_name, len(self.notifier.channels))
 
-        logger.info(f"PACE Atlas initialized for {self.server_name}")
-
-    def _setup_collector(self) -> CompositeCollector:
-        """Setup the telemetry collector."""
+    def _setup_collector(self):
         collector = CompositeCollector()
-
-        # Add all collectors
-        collectors = [
-            SystemCollector,
-            MemoryCollector,
-            DiskCollector,
-            NetworkCollector,
-            ProcessCollector,
-            SecurityCollector,
-            CloudCollector,
-            LogAggregator,
-        ]
-
-        for collector_class in collectors:
+        for cls in (SystemCollector, MemoryCollector, DiskCollector, NetworkCollector,
+                    ProcessCollector, SecurityCollector, CloudCollector, LogAggregator):
             try:
-                c = collector_class(
-                    self.config.get("telemetry", {}).get(
-                        collector_class.__name__.replace("Collector", "").lower(), {}
-                    )
-                )
-                collector.add_collector(c)
-            except Exception as e:
-                logger.warning(f"Failed to add {collector_class.__name__}: {e}")
-
-        logger.info(f"Added {len(collector.collectors)} telemetry collectors")
+                collector.add_collector(cls(self.config.get("telemetry", {}).get(cls.__name__.replace("Collector", "").lower(), {})))
+            except Exception as exc:
+                logger.warning("collector %s failed to init: %s", cls.__name__, exc)
         return collector
 
     def _setup_llm_client(self):
-        """Setup LLM client for intelligent decisions."""
-        # Try to setup client - don't require config to be set first
-        # Check environment variable first
+        llm = self.config.get("llm", {})
+        provider = llm.get("provider")
+        model = llm.get("model")
+        api_key = llm.get("api_key")
         try:
             from openai import OpenAI
-
-            api_key = os.environ.get("GROQ_API_KEY")
-            if not api_key:
-                api_key = self._get_config_key("GROQ_API_KEY")
-
-            if api_key:
-                client = OpenAI(
-                    api_key=api_key, base_url="https://api.groq.com/openai/v1"
-                )
-                logger.info(f"LLM client configured: Groq (llama-3.3-70b-versatile)")
-                return client
-
         except ImportError:
-            pass
+            logger.warning("openai package not installed; LLM decision layer disabled")
+            return None
 
+        if not api_key and not provider:
+            logger.info("no LLM configured (no provider/api key); LLM decision layer disabled")
+            return None
+
+        bases = {
+            "groq": "https://api.groq.com/openai/v1",
+            "openai": "https://api.openai.com/v1",
+            "anthropic": None,
+        }
+        base_url = llm.get("base_url") or bases.get(provider)
         try:
-            # Try OpenAI
-            from openai import OpenAI
+            client = OpenAI(api_key=api_key, base_url=base_url) if base_url else OpenAI(api_key=api_key)
+        except Exception as exc:
+            logger.warning("LLM client init failed: %s", exc)
+            return None
+        self._llm_model = model or llm.get("model") or "gpt-4o-mini"
+        logger.info("LLM configured: %s (%s)", provider, self._llm_model)
+        return client
 
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if not api_key:
-                api_key = self._get_config_key("openai_api_key")
+    def _telemetry_dict(self, snapshots):
+        data = {}
+        for snap in snapshots:
+            data[snap.collector_name] = snap.data
+        return data
 
-            if api_key:
-                client = OpenAI(api_key=api_key)
-                logger.info(f"LLM client configured: {model}")
-                return client
-
-        except ImportError:
-            pass
-
+    def _llm_complete(self, prompt: str, max_tokens: int = 500) -> Optional[str]:
+        if not self.llm_client:
+            return None
         try:
-            # Try Anthropic
-            import anthropic
-
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-            if not api_key:
-                api_key = self._get_config_key("anthropic_api_key")
-
-            if api_key:
-                client = anthropic.Anthropic(api_key=api_key)
-                logger.info(f"LLM client configured: {model}")
-                return client
-
-        except ImportError:
-            pass
-
-        logger.warning("No LLM client available")
-        return None
-
-    def _get_config_key(self, key: str) -> Optional[str]:
-        """Get API key from config."""
-        env_file = self.config_dir / ".env"
-        if env_file.exists():
-            with open(env_file) as f:
-                for line in f:
-                    if line.startswith(f"{key}="):
-                        return line.split("=", 1)[1].strip()
-        return None
-
-    def _setup_notifications(self):
-        """Setup notification handler."""
-        # Import from parent gateway
-        try:
-            from gateway.run import Gateway
-
-            # Check if gateway is running
-            channel = self.config.get("notification_channel", "telegram")
-            logger.info(f"Notifications will be sent via {channel}")
-            return None  # Will use gateway when available
-
-        except ImportError:
-            logger.warning("Gateway not available for notifications")
+            response = self.llm_client.chat.completions.create(
+                model=self._llm_model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+            )
+            return response.choices[0].message.content
+        except Exception as exc:
+            logger.warning("LLM call failed: %s", exc)
             return None
 
     def run_once(self) -> AlertDecision:
-        """
-        Run one monitoring cycle.
+        snapshots = self.collector.collect_all()
+        telemetry = self._telemetry_dict(snapshots)
 
-        Returns:
-            AlertDecision from this cycle
-        """
-        logger.info("=" * 50)
-        logger.info(f"PACE Atlas check started at {datetime.now().isoformat()}")
+        for snap in snapshots:
+            self.history.record_telemetry(snap.collector_name, snap.data)
 
         try:
-            # Step 1: Collect telemetry
-            logger.info("Collecting telemetry...")
-            snapshots = self.collector.collect_all()
+            insights = self.capabilities.run_full_analysis(telemetry)
+        except Exception as exc:
+            logger.warning("capabilities analysis failed: %s", exc)
+            insights = []
 
-            if not snapshots:
-                logger.warning("No telemetry collected")
-                return AlertDecision(
-                    should_alert=False,
-                    reason="No telemetry data collected",
-                    alert_type="error",
-                )
+        context = self.feedback.get_context()
+        context["server_name"] = self.server_name
+        decision = self.alert_engine.decide(snapshots, context)
 
-            logger.info(f"Collected {len(snapshots)} telemetry snapshots")
+        if decision.should_alert:
+            self._dispatch_alert(decision, telemetry, insights)
+        return decision
 
-            # Step 2: Make alert decision
-            logger.info("Evaluating alert decision...")
+    def _dispatch_alert(self, decision, telemetry, insights):
+        key = (decision.alert_type, decision.severity)
+        if self.suppress_repeats and self.history.is_suppressed(*key, window_seconds=self.dedupe_window):
+            logger.info("suppressed repeat alert %s/%s (dedupe window %ss)", *key, self.dedupe_window)
+            return
 
-            # Get feedback context
-            feedback_context = self.feedback.get_context()
-            feedback_context["server_name"] = self.server_name
+        subject = self._subject(decision)
+        body = self._format_alert_message(decision, telemetry, insights)
+        delivered = self.notifier.send(subject, body)
+        self.history.record_alert_sent(decision.alert_type, decision.severity, decision.reason)
+        logger.info("alert delivered via: %s", ", ".join(delivered) or "none")
+        self.last_alert_at = datetime.now()
 
-            decision = self.alert_engine.decide(snapshots, feedback_context)
+    @staticmethod
+    def _subject(decision) -> str:
+        sev = decision.severity
+        icon = {"critical": "🔴 CRITICAL", "warning": "🟡 WARNING"}.get(sev, "ℹ️ INFO")
+        return f"{icon}: {decision.reason[:80]}"
 
-            logger.info(f"Decision: {'ALERT' if decision.should_alert else 'SILENT'}")
-            logger.info(f"Reason: {decision.reason}")
+    def _format_alert_message(self, decision, telemetry, insights) -> str:
+        lines = [f"Server: {self.server_name}", "", decision.reason, "", "--- Metrics ---"]
+        for snap_name, key, label in (("system", "cpu_percent", "CPU"), ("memory", "usage_percent", "Memory"), ("disk", "usage_percent", "Disk")):
+            value = (telemetry.get(snap_name) or {}).get(key)
+            if value is not None:
+                lines.append(f"{label}: {value}%")
 
-            # Step 3: Handle alert
-            if decision.should_alert:
-                self._send_alert(decision, snapshots)
-                self.last_alert_time = datetime.now()
+        trend_lines = []
+        for snap_name, key, label in (("system", "cpu_percent", "CPU"), ("memory", "usage_percent", "Memory"), ("disk", "usage_percent", "Disk")):
+            samples = self.history.recent_values(snap_name, key, window_seconds=3600)
+            if len(samples) >= 3:
+                avg = sum(v for _, v in samples) / len(samples)
+                trend_lines.append(f"{label} 1h avg: {avg:.1f}%")
+        if trend_lines:
+            lines += ["", "--- Trend (1h) ---"] + trend_lines
 
-            return decision
+        if insights:
+            lines.append("")
+            lines.append("--- Insights ---")
+            for result in insights[:5]:
+                title = getattr(result, "title", "insight")
+                body = getattr(result, "body", "")
+                lines.append(f"• {title}: {body}")
 
-        except Exception as e:
-            logger.error(f"Error in monitoring cycle: {e}", exc_info=True)
-            return AlertDecision(
-                should_alert=True,
-                reason=f"Monitoring error: {str(e)[:100]}",
-                alert_type="error",
-                severity="warning",
-            )
-
-    def _send_alert(self, decision: AlertDecision, snapshots: list) -> None:
-        """Send alert notification to user."""
-        logger.info(f"Sending alert: {decision.reason}")
-
-        # Build message
-        message = self._format_alert_message(decision, snapshots)
-
-        # Try to send via gateway
-        try:
-            # This would integrate with the gateway
-            logger.info(f"Alert message: {message[:200]}...")
-        except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
-
-    def _format_alert_message(self, decision: AlertDecision, snapshots: list) -> str:
-        """Format alert message for user notification."""
-        lines = []
-
-        # Header with severity
-        if decision.severity == "critical":
-            lines.append("🔴 CRITICAL ALERT")
-        elif decision.severity == "warning":
-            lines.append("🟡 WARNING")
-        else:
-            lines.append("ℹ️ INFO")
-
-        # Server name
-        lines.append(f"Server: {self.server_name}")
-
-        # Main message
-        lines.append(f"\n{decision.reason}")
-
-        # Add relevant metrics
-        lines.append("\n--- Current Metrics ---")
-
-        for snapshot in snapshots:
-            if snapshot.collector_name == "system":
-                cpu = snapshot.data.get("cpu_percent", "N/A")
-                lines.append(f"CPU: {cpu}%")
-            elif snapshot.collector_name == "memory":
-                mem = snapshot.data.get("usage_percent", "N/A")
-                lines.append(f"Memory: {mem}%")
-            elif snapshot.collector_name == "disk":
-                disk = snapshot.data.get("usage_percent", "N/A")
-                lines.append(f"Disk: {disk}%")
-
-        # Footer
         lines.append(f"\n— PACE Atlas ({datetime.now().strftime('%H:%M')})")
-
         return "\n".join(lines)
 
     def run_daemon(self, interval: int = 300) -> None:
-        """
-        Run PACE Atlas continuously.
+        self._install_signal_handlers()
+        self._acquire_pidfile()
+        logger.info("daemon started (interval %ss, pid %d)", interval, os.getpid())
+        try:
+            while self._running:
+                try:
+                    self.run_once()
+                except Exception as exc:
+                    logger.error("cycle failed: %s", exc)
+                for _ in range(max(1, interval // 5)):
+                    if not self._running:
+                        break
+                    time.sleep(5)
+        finally:
+            self._release_pidfile()
+            logger.info("daemon stopped cleanly")
 
-        Args:
-            interval: Seconds between checks (default: 300 = 5 minutes)
-        """
-        logger.info(f"Starting PACE Atlas daemon (interval: {interval}s)")
+    def _install_signal_handlers(self):
+        def _stop(_sig, _frame):
+            logger.info("signal %s received, shutting down", _sig)
+            self._running = False
+        signal.signal(signal.SIGTERM, _stop)
+        signal.signal(signal.SIGINT, _stop)
 
-        while True:
+    def _pidfile(self) -> Path:
+        return self.home / "atlas.pid"
+
+    def _acquire_pidfile(self):
+        pidfile = self._pidfile()
+        if pidfile.exists():
             try:
-                self.run_once()
-            except Exception as e:
-                logger.error(f"Daemon error: {e}")
+                old = int(pidfile.read_text().strip())
+                os.kill(old, 0)
+                raise SystemExit(f"PACE Atlas already running (pid {old}); remove {pidfile} if stale")
+            except (ValueError, ProcessLookupError):
+                logger.info("stale pidfile %s removed", pidfile)
+                pidfile.unlink(missing_ok=True)
+        pidfile.write_text(str(os.getpid()))
 
-            logger.info(f"Next check in {interval} seconds...")
-            time.sleep(interval)
+    def _release_pidfile(self):
+        self._pidfile().unlink(missing_ok=True)
+
+
+def _systemd_unit(python: str, interval: int) -> str:
+    return f"""[Unit]
+Description=PACE Atlas — resident SRE agent
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={python} -m pace_atlas.runner --daemon --interval {interval}
+Restart=always
+RestartSec=30
+UMask=0022
+
+[Install]
+WantedBy=default.target
+"""
+
+
+def install_systemd(python: str, interval: int) -> Path:
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    unit = unit_dir / "pace-atlas.service"
+    unit.write_text(_systemd_unit(python, interval))
+    return unit
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="PACE Atlas - Proactive Autonomous Cloud Environment"
-    )
-
-    parser.add_argument(
-        "--daemon", action="store_true", help="Run continuously as daemon"
-    )
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=300,
-        help="Seconds between checks (default: 300)",
-    )
-    parser.add_argument(
-        "--server-name",
-        type=str,
-        default="server",
-        help="Server name for identification",
-    )
-    parser.add_argument("--config", type=str, help="Path to config file")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-
+    parser = argparse.ArgumentParser(description="PACE Atlas - Proactive Autonomous Cloud Environment")
+    parser.add_argument("--daemon", action="store_true", help="run continuously as a daemon")
+    parser.add_argument("--interval", type=int, default=None, help="seconds between checks")
+    parser.add_argument("--server-name", type=str, default=None, help="server name")
+    parser.add_argument("--config", "-c", type=str, default=None, help="path to config file")
+    parser.add_argument("--verbose", "-v", action="store_true", help="verbose output")
+    parser.add_argument("--install", action="store_true", help="write default config to ~/.pace/config.yaml")
+    parser.add_argument("--install-systemd", action="store_true", help="write user systemd unit and print commands")
+    parser.add_argument("--status", action="store_true", help="print health summary and exit")
+    parser.add_argument("--once", action="store_true", help="run a single cycle and exit (default)")
     args = parser.parse_args()
 
-    # Set logging level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s [PACE Atlas] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-    # Load config if provided
-    config = {}
-    if args.config:
-        import yaml
+    if args.install:
+        path = atlas_config.install_default_config()
+        print(f"Default config written to {path}")
+        return
 
-        with open(args.config) as f:
-            config = yaml.safe_load(f)
+    overrides = {}
+    if args.interval:
+        overrides["check_interval"] = args.interval
+    if args.server_name:
+        overrides["server_name"] = args.server_name
 
-    # Add server name to config
-    config["server_name"] = args.server_name
+    config = atlas_config.load_config(args.config, overrides)
+    interval = config.get("check_interval", 300)
 
-    # Create and run PACE Atlas
+    if args.install_systemd:
+        unit = install_systemd(PYTHON, interval)
+        print(f"Systemd unit written to {unit}")
+        print(f"  systemctl --user daemon-reload")
+        print(f"  systemctl --user enable --now pace-atlas")
+        return
+
     atlas = PACEAtlas(config)
 
+    if args.status:
+        print(f"PACE Atlas: {atlas.server_name}")
+        print(f"Collectors: {len(atlas.collector.collectors)}")
+        print(f"Channels:   {', '.join(c.name for c in atlas.notifier.channels) or 'none'}")
+        print(f"LLM:        {'enabled (' + getattr(atlas, '_llm_model', '?') + ')' if atlas.llm_client else 'disabled'}")
+        print(f"History:    {atlas.history.summary()}")
+        return
+
     if args.daemon:
-        atlas.run_daemon(interval=args.interval)
+        atlas.run_daemon(interval=interval)
     else:
         atlas.run_once()
 
