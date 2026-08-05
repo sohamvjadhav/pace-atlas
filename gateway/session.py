@@ -13,6 +13,7 @@ import hashlib
 import logging
 import os
 import json
+import re
 import threading
 import uuid
 from pathlib import Path
@@ -61,6 +62,9 @@ def auto_continue_freshness_window() -> float:
 # PII redaction helpers
 # ---------------------------------------------------------------------------
 
+_PHONE_RE = re.compile(r"^\+?\d[\d\-\s]{6,}$")
+
+
 def _hash_id(value: str) -> str:
     """Deterministic 12-char hex hash of an identifier."""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
@@ -83,6 +87,10 @@ def _hash_chat_id(value: str) -> str:
         return f"{prefix}:{_hash_id(value[colon + 1:])}"
     return _hash_id(value)
 
+
+def _looks_like_phone(value: str) -> bool:
+    """Return True if *value* looks like a phone number (E.164 or similar)."""
+    return bool(_PHONE_RE.match(value.strip()))
 
 from .config import (
     Platform,
@@ -163,7 +171,7 @@ class SessionSource:
     user_name: Optional[str] = None
     thread_id: Optional[str] = None  # For forum topics, Discord threads, etc.
     chat_topic: Optional[str] = None  # Channel topic/description (Discord, Slack)
-    user_id_alt: Optional[str] = None  # Platform-specific stable alt ID (Signal UUID, Feishu union_id)
+    user_id_alt: Optional[str] = None  # Signal UUID (alternative to phone number)
     chat_id_alt: Optional[str] = None  # Signal group internal ID
     is_bot: bool = False  # True when the message author is a bot/webhook (Discord)
     # Platform-neutral SCOPE discriminator (Discord guild / Slack workspace /
@@ -283,7 +291,7 @@ class SessionSource:
         if self.prospective_thread_id:
             d["prospective_thread_id"] = self.prospective_thread_id
         return d
-
+    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SessionSource":
         return cls(
@@ -308,6 +316,15 @@ class SessionSource:
             prospective_thread_id=data.get("prospective_thread_id"),
         )
     
+    @classmethod
+    def local_cli(cls) -> "SessionSource":
+        """Create a source representing the local CLI."""
+        return cls(
+            platform=Platform.LOCAL,
+            chat_id="cli",
+            chat_name="CLI terminal",
+            chat_type="dm",
+        )
 
 
 @dataclass
@@ -323,7 +340,6 @@ class SessionContext:
     source: SessionSource
     connected_platforms: List[Platform]
     home_channels: Dict[Platform, HomeChannel]
-    shared_multi_user_session: bool = False
     
     # Session metadata
     session_key: str = ""
@@ -338,7 +354,6 @@ class SessionContext:
             "home_channels": {
                 p.value: hc.to_dict() for p, hc in self.home_channels.items()
             },
-            "shared_multi_user_session": self.shared_multi_user_session,
             "session_key": self.session_key,
             "session_id": self.session_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -350,7 +365,6 @@ _PII_SAFE_PLATFORMS = frozenset({
     Platform.WHATSAPP,
     Platform.SIGNAL,
     Platform.TELEGRAM,
-    Platform.BLUEBUBBLES,
 })
 """Platforms where user IDs can be safely redacted (no in-message mention system
 that requires raw IDs).  Discord is excluded because mentions use ``<@user_id>``
@@ -483,7 +497,7 @@ def build_session_context_prompt(
 ) -> str:
     """
     Build the dynamic system prompt section that tells the agent about its context.
-
+    
     This is injected into the system prompt so the agent knows:
     - Where messages are coming from
     - What platforms are connected
@@ -495,18 +509,8 @@ def build_session_context_prompt(
     Platforms like Discord are excluded because mentions need real IDs.
     Routing still uses the original values (they stay in SessionSource).
     """
-    # Only apply redaction on platforms where IDs aren't needed for mentions.
-    # Check both the hardcoded set (builtins) and the plugin registry.
-    _is_pii_safe = context.source.platform in _PII_SAFE_PLATFORMS
-    if not _is_pii_safe:
-        try:
-            from gateway.platform_registry import platform_registry
-            entry = platform_registry.get(context.source.platform.value)
-            if entry and entry.pii_safe:
-                _is_pii_safe = True
-        except Exception:
-            pass
-    redact_pii = redact_pii and _is_pii_safe
+    # Only apply redaction on platforms where IDs aren't needed for mentions
+    redact_pii = redact_pii and context.source.platform in _PII_SAFE_PLATFORMS
     lines = [
         "## Current Session Context",
         "",
@@ -517,7 +521,7 @@ def build_session_context_prompt(
         ),
         "",
     ]
-
+    
     # Source info
     platform_name = context.source.platform.value.title()
     if context.source.platform == Platform.LOCAL:
@@ -699,9 +703,9 @@ def build_session_context_prompt(
     for p in context.connected_platforms:
         if p != Platform.LOCAL:
             platforms_list.append(f"{p.value}: Connected ✓")
-
+    
     lines.append(f"**Connected Platforms:** {', '.join(platforms_list)}")
-
+    
     # Home channels
     if context.home_channels:
         lines.append("")
@@ -715,9 +719,7 @@ def build_session_context_prompt(
     # Delivery options for scheduled tasks
     lines.append("")
     lines.append("**Delivery options for scheduled tasks:**")
-
-    from hermes_constants import display_hermes_home
-
+    
     # Origin delivery
     if context.source.platform == Platform.LOCAL:
         lines.append("- `\"origin\"` → Local output (saved to files)")
@@ -727,12 +729,10 @@ def build_session_context_prompt(
         )
         _origin_label = _format_untrusted_prompt_value(_origin_label)
         lines.append(f"- `\"origin\"` → Back to this chat ({_origin_label})")
-
+    
     # Local always available
-    lines.append(
-        f"- `\"local\"` → Save to local files only ({display_hermes_home()}/cron/output/)"
-    )
-
+    lines.append("- `\"local\"` → Save to local files only (~/.pace/cron/output/)")
+    
     # Platform home channels
     for platform, home in context.home_channels.items():
         home_name = _format_untrusted_prompt_value(home.name)
@@ -741,7 +741,7 @@ def build_session_context_prompt(
     # Note about explicit targeting
     lines.append("")
     lines.append("*For explicit targeting, use `\"platform:chat_id\"` format if the user provides a specific chat ID.*")
-
+    
     return "\n".join(lines)
 
 
@@ -1084,11 +1084,7 @@ def build_session_key(
       - chat_id identifies the parent group/channel.
       - user_id/user_id_alt isolates participants within that parent chat when available when
         ``group_sessions_per_user`` is enabled.
-      - thread_id differentiates threads within that parent chat.  When
-        ``thread_sessions_per_user`` is False (default), threads are *shared* across all
-        participants — user_id is NOT appended, so every user in the thread
-        shares a single session.  This is the expected UX for threaded
-        conversations (Telegram forum topics, Discord threads, Slack threads).
+      - thread_id differentiates threads within that parent chat.
       - Without participant identifiers, or when isolation is disabled, messages fall back to one
         shared session per chat.
       - Without identifiers, messages fall back to one session per platform/chat_type.
@@ -1212,7 +1208,8 @@ class SessionStore:
     """
     
     def __init__(self, sessions_dir: Path, config: GatewayConfig,
-                 has_active_processes_fn=None):
+                 has_active_processes_fn=None,
+                 on_auto_reset=None):
         self.sessions_dir = sessions_dir
         self.config = config
         self._entries: Dict[str, SessionEntry] = {}
@@ -1573,7 +1570,7 @@ class SessionStore:
                 json.dump(data, f, indent=2)
                 f.flush()
                 os.fsync(f.fileno())
-            atomic_replace(tmp_path, sessions_file)
+            os.replace(tmp_path, sessions_file)
         except BaseException:
             try:
                 os.unlink(tmp_path)
@@ -2103,12 +2100,12 @@ class SessionStore:
 
         now = _now()
 
-        if policy.mode in {"idle", "both"}:
+        if policy.mode in ("idle", "both"):
             idle_deadline = entry.updated_at + timedelta(minutes=policy.idle_minutes)
             if now > idle_deadline:
                 return True
 
-        if policy.mode in {"daily", "both"}:
+        if policy.mode in ("daily", "both"):
             today_reset = now.replace(
                 hour=policy.at_hour,
                 minute=0, second=0, microsecond=0,
@@ -2204,12 +2201,12 @@ class SessionStore:
         
         now = _now()
         
-        if policy.mode in {"idle", "both"}:
+        if policy.mode in ("idle", "both"):
             idle_deadline = entry.updated_at + timedelta(minutes=policy.idle_minutes)
             if now > idle_deadline:
                 return "idle"
         
-        if policy.mode in {"daily", "both"}:
+        if policy.mode in ("daily", "both"):
             today_reset = now.replace(
                 hour=policy.at_hour, 
                 minute=0, 
@@ -2633,6 +2630,41 @@ class SessionStore:
             except Exception as e:
                 print(f"[gateway] Warning: Failed to create SQLite session: {e}")
 
+        # Seed new DM thread sessions with parent DM session history.
+        # When a bot reply creates a Slack thread and the user responds in it,
+        # the thread gets a new session (keyed by thread_ts).  Without seeding,
+        # the thread session starts with zero context — the user's original
+        # question and the bot's answer are invisible.  Fix: copy the parent
+        # DM session's transcript into the new thread session so context carries
+        # over while still keeping threads isolated from each other.
+        if (
+            source.chat_type == "dm"
+            and source.thread_id
+            and entry.created_at == entry.updated_at  # brand-new session
+            and not was_auto_reset
+        ):
+            parent_source = SessionSource(
+                platform=source.platform,
+                chat_id=source.chat_id,
+                chat_type="dm",
+                user_id=source.user_id,
+                # no thread_id — this is the parent DM session
+            )
+            parent_key = self._generate_session_key(parent_source)
+            with self._lock:
+                parent_entry = self._entries.get(parent_key)
+            if parent_entry and parent_entry.session_id != entry.session_id:
+                try:
+                    parent_history = self.load_transcript(parent_entry.session_id)
+                    if parent_history:
+                        self.rewrite_transcript(entry.session_id, parent_history)
+                        logger.info(
+                            "[Session] Seeded DM thread session %s with %d messages from parent %s",
+                            entry.session_id, len(parent_history), parent_entry.session_id,
+                        )
+                except Exception as e:
+                    logger.warning("[Session] Failed to seed thread session: %s", e)
+
         return entry
 
     def update_session(
@@ -2907,10 +2939,9 @@ class SessionStore:
                 created_at=now,
                 updated_at=now,
                 origin=old_entry.origin,
-                display_name=display_name if display_name is not None else old_entry.display_name,
+                display_name=old_entry.display_name,
                 platform=old_entry.platform,
                 chat_type=old_entry.chat_type,
-                is_fresh_reset=True,
             )
 
             self._entries[session_key] = new_entry
@@ -2996,8 +3027,7 @@ class SessionStore:
         Used by ``/resume`` to restore a previously-named session.
         Ends the current session in SQLite (like reset), but instead of
         generating a fresh session ID, re-uses ``target_session_id`` so the
-        old transcript is loaded on the next message. If the target session was
-        previously ended, re-open it so gateway resume semantics match the CLI.
+        old transcript is loaded on the next message.
         """
         db_end_session_id = None
         new_entry = None
@@ -3101,6 +3131,10 @@ class SessionStore:
             entry = self._entries.get(session_key)
             return getattr(entry, "session_id", None) if entry else None
     
+    def get_transcript_path(self, session_id: str) -> Path:
+        """Get the path to a session's legacy transcript file."""
+        return self.sessions_dir / f"{session_id}.jsonl"
+    
     def append_to_transcript(self, session_id: str, message: Dict[str, Any], skip_db: bool = False) -> None:
         """Serialize transcript draining across queue migration boundaries."""
         if not self._db or skip_db:
@@ -3128,10 +3162,10 @@ class SessionStore:
         """Append a message to a session's transcript (SQLite).
 
         Args:
-            skip_db: When True, skip the SQLite write. Used when the agent
-                     already persisted messages to SQLite via its own
-                     _flush_messages_to_session_db(), preventing the
-                     duplicate-write bug (#860).
+            skip_db: When True, only write to JSONL and skip the SQLite write.
+                     Used when the agent already persisted messages to SQLite
+                     via its own _flush_messages_to_session_db(), preventing
+                     the duplicate-write bug (#860).
         """
         with self._transcript_retry_lock:
             pending = self._dirty_transcripts.setdefault(session_id, [])
@@ -3378,7 +3412,14 @@ class SessionStore:
             return False
 
     def load_transcript(self, session_id: str) -> List[Dict[str, Any]]:
-        """Load all messages from a session's transcript.
+        """Load all messages from a session's transcript."""
+        db_messages = []
+        # Try SQLite first
+        if self._db:
+            try:
+                db_messages = self._db.get_messages_as_conversation(session_id)
+            except Exception as e:
+                logger.debug("Could not load messages from DB: %s", e)
 
         state.db is the canonical store. The legacy JSONL fallback was removed
         in spec 002 — pre-DB sessions on existing disks have already been
@@ -3398,8 +3439,24 @@ class SessionStore:
             logger.debug("Could not load messages from DB: %s", e)
             return []
 
-    def rewind_session(self, session_id: str, n: int = 1) -> Optional[Dict[str, Any]]:
-        """Back up ``n`` user turns via soft-delete, keeping rows for audit.
+        # Prefer whichever source has more messages.
+        #
+        # Background: when a session pre-dates SQLite storage (or when the DB
+        # layer was added while a long-lived session was already active), the
+        # first post-migration turn writes only the *new* messages to SQLite
+        # (because _flush_messages_to_session_db skips messages already in
+        # conversation_history, assuming they're persisted).  On the *next*
+        # turn load_transcript returns those few SQLite rows and ignores the
+        # full JSONL history — the model sees a context of 1-4 messages instead
+        # of hundreds.  Using the longer source prevents this silent truncation.
+        if len(jsonl_messages) > len(db_messages):
+            if db_messages:
+                logger.debug(
+                    "Session %s: JSONL has %d messages vs SQLite %d — "
+                    "using JSONL (legacy session not yet fully migrated)",
+                    session_id, len(jsonl_messages), len(db_messages),
+                )
+            return jsonl_messages
 
         Unlike :meth:`rewrite_transcript` (a hard replace used by /retry),
         this flips the truncated rows to ``active=0`` in state.db so they
@@ -3474,11 +3531,6 @@ def build_session_context(
         source=source,
         connected_platforms=connected,
         home_channels=home_channels,
-        shared_multi_user_session=is_shared_multi_user_session(
-            source,
-            group_sessions_per_user=getattr(config, "group_sessions_per_user", True),
-            thread_sessions_per_user=getattr(config, "thread_sessions_per_user", False),
-        ),
     )
     
     if session_entry:

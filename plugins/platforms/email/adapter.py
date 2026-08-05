@@ -1,7 +1,7 @@
 """
-Email platform adapter for the Hermes gateway.
+Email platform adapter for the PACE gateway.
 
-Allows users to interact with Hermes by sending emails.
+Allows users to interact with PACE by sending emails.
 Uses IMAP to receive and SMTP to send messages.
 
 Environment variables:
@@ -33,10 +33,9 @@ from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email.utils import formatdate
 from email import encoders
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from gateway.platforms.base import (
     BasePlatformAdapter,
@@ -101,7 +100,7 @@ _NOREPLY_PATTERNS = (
 # RFC headers that indicate bulk/automated mail
 _AUTOMATED_HEADERS = {
     "Auto-Submitted": lambda v: v.lower() != "no",
-    "Precedence": lambda v: v.lower() in {"bulk", "list", "junk"},
+    "Precedence": lambda v: v.lower() in ("bulk", "list", "junk"),
     "X-Auto-Response-Suppress": lambda v: bool(v),
     "List-Unsubscribe": lambda v: bool(v),
 }
@@ -168,29 +167,6 @@ class _IPv4SMTP_SSL(smtplib.SMTP_SSL):
 
 # Supported image extensions for inline detection
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
-
-def _send_imap_id(imap: "imaplib.IMAP4") -> None:
-    """Send RFC 2971 IMAP ID command identifying this client.
-
-    Required by 163/NetEase mailbox after LOGIN: without it, every UID
-    SEARCH/FETCH returns ``BYE Unsafe Login`` and disconnects.  Other
-    IMAP servers either honor it silently or reject the unknown command;
-    we swallow failures so non-supporting servers keep working.
-    """
-    try:
-        try:
-            from hermes_cli import __version__ as _hermes_version
-        except Exception:  # noqa: BLE001 — keep ID best-effort if import fails
-            _hermes_version = "0"
-        imap.xatom(
-            "ID",
-            f'("name" "hermes-agent" "version" "{_hermes_version}" '
-            '"vendor" "NousResearch" '
-            '"support-email" "noreply@nousresearch.com")',
-        )
-    except Exception as e:  # noqa: BLE001 — best-effort, never fatal
-        logger.debug("[Email] IMAP ID command not accepted: %s", e)
-
 
 def _is_automated_sender(address: str, headers: dict) -> bool:
     """Return True if this email is from an automated/noreply source."""
@@ -425,7 +401,7 @@ def _extract_attachments(
             continue
         # Skip text/plain and text/html body parts
         content_type = part.get_content_type()
-        if content_type in {"text/plain", "text/html"} and "attachment" not in disposition:
+        if content_type in ("text/plain", "text/html") and "attachment" not in disposition:
             continue
 
         filename = part.get_filename()
@@ -441,11 +417,7 @@ def _extract_attachments(
 
         ext = Path(filename).suffix.lower()
         if ext in _IMAGE_EXTS:
-            try:
-                cached_path = cache_image_from_bytes(payload, ext)
-            except ValueError:
-                logger.debug("Skipping non-image attachment %s (invalid magic bytes)", filename)
-                continue
+            cached_path = cache_image_from_bytes(payload, ext)
             attachments.append({
                 "path": cached_path,
                 "filename": filename,
@@ -629,7 +601,6 @@ class EmailAdapter(BasePlatformAdapter):
             # Test IMAP connection
             imap = imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30)
             imap.login(self._address, self._password)
-            _send_imap_id(imap)
             # Mark all existing messages as seen so we only process new ones
             imap.select("INBOX")
             status, data = imap.uid("search", None, "ALL")
@@ -699,7 +670,6 @@ class EmailAdapter(BasePlatformAdapter):
             imap = imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30)
             try:
                 imap.login(self._address, self._password)
-                _send_imap_id(imap)
                 imap.select("INBOX")
 
                 status, data = imap.uid("search", None, "UNSEEN")
@@ -976,7 +946,7 @@ class EmailAdapter(BasePlatformAdapter):
 
         # Thread context for reply
         ctx = self._thread_context.get(to_addr, {})
-        subject = ctx.get("subject", "Hermes Agent")
+        subject = ctx.get("subject", "PACE Agent")
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         msg["Subject"] = subject
@@ -1139,7 +1109,6 @@ class EmailAdapter(BasePlatformAdapter):
         caption: Optional[str] = None,
         file_name: Optional[str] = None,
         reply_to: Optional[str] = None,
-        **kwargs,
     ) -> SendResult:
         """Send a file as an email attachment."""
         try:
@@ -1170,7 +1139,7 @@ class EmailAdapter(BasePlatformAdapter):
         msg["To"] = to_addr
 
         ctx = self._thread_context.get(to_addr, {})
-        subject = ctx.get("subject", "Hermes Agent")
+        subject = ctx.get("subject", "PACE Agent")
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         msg["Subject"] = subject

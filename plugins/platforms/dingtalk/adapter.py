@@ -1,64 +1,40 @@
 """
 DingTalk platform adapter using Stream Mode.
 
-Uses dingtalk-stream SDK (>=0.20) for real-time message reception without webhooks.
+Uses dingtalk-stream SDK for real-time message reception without webhooks.
 Responses are sent via DingTalk's session webhook (markdown format).
-Supports: text, images, audio, video, rich text, files, and group @mentions.
 
 Requires:
-    pip install "dingtalk-stream>=0.20" httpx
+    pip install dingtalk-stream httpx
     DINGTALK_CLIENT_ID and DINGTALK_CLIENT_SECRET env vars
 
 Configuration in config.yaml:
     platforms:
       dingtalk:
         enabled: true
-        # Optional group-chat gating (mirrors Slack/Telegram/Discord):
-        require_mention: true            # or DINGTALK_REQUIRE_MENTION env var
-        # free_response_chats:           # conversations that skip require_mention
-        #   - cidABC==
-        # mention_patterns:              # regex wake-words (e.g. Chinese bot names)
-        #   - "^小马"
-        # allowed_users:                 # staff_id or sender_id list; "*" = any
-        #   - "manager1234"
         extra:
           client_id: "your-app-key"      # or DINGTALK_CLIENT_ID env var
           client_secret: "your-secret"   # or DINGTALK_CLIENT_SECRET env var
 """
 
 import asyncio
-import json
 import logging
 import os
-import re
-import traceback
+import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Optional
 
 try:
     import dingtalk_stream
-    from dingtalk_stream import ChatbotMessage
-    from dingtalk_stream.frames import CallbackMessage, AckMessage
-
+    from dingtalk_stream import ChatbotHandler, ChatbotMessage
     DINGTALK_STREAM_AVAILABLE = True
 except Exception:  # noqa: BLE001 — broad: optional SDK's transitive deps (cryptography) may raise non-ImportError; degrade gracefully (#41112)
     DINGTALK_STREAM_AVAILABLE = False
     dingtalk_stream = None  # type: ignore[assignment]
-    ChatbotMessage = None  # type: ignore[assignment]
-    CallbackMessage = None  # type: ignore[assignment]
-    AckMessage = type(
-        "AckMessage",
-        (),
-        {
-            "STATUS_OK": 200,
-            "STATUS_SYSTEM_EXCEPTION": 500,
-        },
-    )  # type: ignore[assignment]
 
 try:
     import httpx
-
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
@@ -130,15 +106,9 @@ def _get_scoped_secret(name, default=None):
 logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_LENGTH = 20000
+DEDUP_WINDOW_SECONDS = 300
+DEDUP_MAX_SIZE = 1000
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
-_SESSION_WEBHOOKS_MAX = 500
-_DINGTALK_WEBHOOK_RE = re.compile(r'^https://(?:api|oapi)\.dingtalk\.com/')
-
-# DingTalk message type → runtime content type
-DINGTALK_TYPE_MAPPING = {
-    "picture": "image",
-    "voice": "audio",
-}
 
 # File extension → MIME type mapping for DingTalk file/image messages.
 # Image MIME types (image/*) are used below in _extract_media to classify
@@ -163,13 +133,7 @@ EXT_MAP = {
 
 
 def check_dingtalk_requirements() -> bool:
-    """Check if DingTalk dependencies are available and configured.
-
-    Lazy-installs dingtalk-stream via ``tools.lazy_deps.ensure("platform.dingtalk")``
-    on first call if not present.
-    """
-    global DINGTALK_STREAM_AVAILABLE, dingtalk_stream, ChatbotMessage, CallbackMessage, AckMessage
-    global HTTPX_AVAILABLE, httpx
+    """Check if DingTalk dependencies are available and configured."""
     if not DINGTALK_STREAM_AVAILABLE or not HTTPX_AVAILABLE:
         try:
             from tools.lazy_deps import ensure as _lazy_ensure
@@ -201,34 +165,9 @@ class DingTalkAdapter(BasePlatformAdapter):
     The dingtalk-stream SDK maintains a long-lived WebSocket connection.
     Incoming messages arrive via a ChatbotHandler callback. Replies are
     sent via the incoming message's session_webhook URL using httpx.
-
-    Features:
-    - Text messages (plain + rich text)
-    - Images, audio, video, files (via download codes)
-    - Group chat @mention detection
-    - Session webhook caching with expiry tracking
-    - Markdown formatted replies
     """
 
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
-
-    @property
-    def SUPPORTS_MESSAGE_EDITING(self) -> bool:  # noqa: N802
-        """Edits only meaningful when AI Cards are configured.
-
-        The gateway gates streaming cursor + edit behaviour on this flag,
-        so we must reflect the actual adapter capability at runtime.
-        """
-        return bool(self._card_template_id and self._card_sdk)
-
-    @property
-    def REQUIRES_EDIT_FINALIZE(self) -> bool:  # noqa: N802
-        """AI Card lifecycle requires an explicit ``finalize=True`` edit
-        to close the streaming indicator, even when the final content is
-        identical to the last streamed update.  Enabled only when cards
-        are configured — webhook-only DingTalk doesn't need it.
-        """
-        return bool(self._card_template_id and self._card_sdk)
 
     def __init__(self, config: PlatformConfig):
         super().__init__(config, Platform.DINGTALK)
@@ -251,89 +190,31 @@ class DingTalkAdapter(BasePlatformAdapter):
         self._stream_client: Any = None
         self._stream_task: Optional[asyncio.Task] = None
         self._http_client: Optional["httpx.AsyncClient"] = None
-        self._card_sdk: Optional[Any] = None
-        self._robot_sdk: Optional[Any] = None
-        self._robot_code: str = extra.get("robot_code") or self._client_id
 
-        # Message deduplication
-        self._dedup = MessageDeduplicator(max_size=1000)
-        # Map chat_id -> (session_webhook, expired_time_ms) for reply routing
-        self._session_webhooks: Dict[str, tuple[str, int]] = {}
-        # Map chat_id -> last inbound ChatbotMessage. Keyed by chat_id instead
-        # of a single class attribute to avoid cross-message clobbering when
-        # multiple conversations run concurrently.
-        self._message_contexts: Dict[str, Any] = {}
-        self._card_template_id: Optional[str] = extra.get("card_template_id")
-
-        # Chats for which we've already fired the Done reaction — prevents
-        # double-firing across segment boundaries or parallel flows
-        # (tool-progress + stream-consumer both finalizing their cards).
-        # Reset each inbound message.
-        self._done_emoji_fired: Set[str] = set()
-        # Cards in streaming state per chat: chat_id -> { out_track_id -> last_content }.
-        # Every `send()` creates+finalizes a card (closed state).  A subsequent
-        # `edit_message(finalize=False)` re-opens the card (DingTalk's API
-        # allows streaming_update on a finalized card — it flips back to
-        # streaming).  We track those reopened cards so the next `send()` can
-        # auto-close them as siblings — otherwise tool-progress cards get
-        # stuck in streaming state forever.
-        self._streaming_cards: Dict[str, Dict[str, str]] = {}
-        # Track fire-and-forget emoji/reaction coroutines so Python's GC
-        # doesn't drop them mid-flight, and we can cancel them on disconnect.
-        self._bg_tasks: Set[asyncio.Task] = set()
+        # Message deduplication: msg_id -> timestamp
+        self._seen_messages: Dict[str, float] = {}
+        # Map chat_id -> session_webhook for reply routing
+        self._session_webhooks: Dict[str, str] = {}
 
     # -- Connection lifecycle -----------------------------------------------
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         """Connect to DingTalk via Stream Mode."""
         if not DINGTALK_STREAM_AVAILABLE:
-            logger.warning(
-                "[%s] dingtalk-stream not installed. Run: pip install 'dingtalk-stream>=0.20'",
-                self.name,
-            )
+            logger.warning("[%s] dingtalk-stream not installed. Run: pip install dingtalk-stream", self.name)
             return False
         if not HTTPX_AVAILABLE:
-            logger.warning(
-                "[%s] httpx not installed. Run: pip install httpx", self.name
-            )
+            logger.warning("[%s] httpx not installed. Run: pip install httpx", self.name)
             return False
         if not self._client_id or not self._client_secret:
-            logger.warning(
-                "[%s] DINGTALK_CLIENT_ID and DINGTALK_CLIENT_SECRET required", self.name
-            )
+            logger.warning("[%s] DINGTALK_CLIENT_ID and DINGTALK_CLIENT_SECRET required", self.name)
             return False
 
         try:
-            # Tighter keepalive so idle CLOSE_WAIT drains promptly (#18451).
-            from gateway.platforms._http_client_limits import platform_httpx_limits
-            self._http_client = httpx.AsyncClient(
-                timeout=30.0, limits=platform_httpx_limits(),
-            )
+            self._http_client = httpx.AsyncClient(timeout=30.0)
 
-            credential = dingtalk_stream.Credential(
-                self._client_id, self._client_secret
-            )
+            credential = dingtalk_stream.Credential(self._client_id, self._client_secret)
             self._stream_client = dingtalk_stream.DingTalkStreamClient(credential)
-
-            # Initialize card SDK if available and configured
-            if CARD_SDK_AVAILABLE and self._card_template_id:
-                sdk_config = open_api_models.Config()
-                sdk_config.protocol = "https"
-                sdk_config.region_id = "central"
-                self._card_sdk = dingtalk_card_client.Client(sdk_config)
-                self._robot_sdk = dingtalk_robot_client.Client(sdk_config)
-                logger.info(
-                    "[%s] Card SDK initialized with template: %s",
-                    self.name,
-                    self._card_template_id,
-                )
-            elif CARD_SDK_AVAILABLE:
-                # Initialize robot SDK even without card template (for media download)
-                sdk_config = open_api_models.Config()
-                sdk_config.protocol = "https"
-                sdk_config.region_id = "central"
-                self._robot_sdk = dingtalk_robot_client.Client(sdk_config)
-                logger.info("[%s] Robot SDK initialized (media download)", self.name)
 
             # Capture the current event loop for cross-thread dispatch
             loop = asyncio.get_running_loop()
@@ -351,12 +232,12 @@ class DingTalkAdapter(BasePlatformAdapter):
             return False
 
     async def _run_stream(self) -> None:
-        """Run the async stream client with auto-reconnection."""
+        """Run the blocking stream client with auto-reconnection."""
         backoff_idx = 0
         while self._running:
             try:
                 logger.debug("[%s] Starting stream client...", self.name)
-                await self._stream_client.start()
+                await asyncio.to_thread(self._stream_client.start)
             except asyncio.CancelledError:
                 return
             except Exception as e:
@@ -377,51 +258,13 @@ class DingTalkAdapter(BasePlatformAdapter):
         self._running = False
         self._mark_disconnected()
 
-        # Close the active websocket first so the stream task sees the
-        # disconnection and exits cleanly, rather than getting stuck
-        # awaiting frames that will never arrive.
-        websocket = getattr(self._stream_client, "websocket", None) if self._stream_client else None
-        if websocket is not None:
-            try:
-                await websocket.close()
-            except Exception as e:
-                logger.debug("[%s] websocket close during disconnect failed: %s", self.name, e)
-
         if self._stream_task:
-            # Try graceful close first if SDK supports it. The SDK's close()
-            # is sync and may block on network I/O, so offload to a thread.
-            if hasattr(self._stream_client, "close"):
-                try:
-                    await asyncio.to_thread(self._stream_client.close)
-                except Exception:
-                    pass
-
             self._stream_task.cancel()
             try:
-                await asyncio.wait_for(self._stream_task, timeout=5.0)
-            except (asyncio.CancelledError, asyncio.TimeoutError):
-                logger.debug("[%s] stream task did not exit cleanly during disconnect", self.name)
+                await self._stream_task
+            except asyncio.CancelledError:
+                pass
             self._stream_task = None
-
-        # Cancel any in-flight background tasks (emoji reactions, etc.)
-        if self._bg_tasks:
-            for task in list(self._bg_tasks):
-                task.cancel()
-            await asyncio.gather(*self._bg_tasks, return_exceptions=True)
-            self._bg_tasks.clear()
-
-        # Finalize any open streaming cards before the HTTP client closes so
-        # they don't stay stuck in streaming state on DingTalk's UI after
-        # a gateway restart.  _close_streaming_siblings handles its own
-        # per-card exceptions; the outer try is a safety net for token fetch.
-        for _chat_id in list(self._streaming_cards):
-            try:
-                await self._close_streaming_siblings(_chat_id)
-            except Exception as _exc:
-                logger.debug(
-                    "[%s] Failed to finalize streaming card on disconnect for %s: %s",
-                    self.name, _chat_id, _exc,
-                )
 
         if self._http_client:
             await self._http_client.aclose()
@@ -429,10 +272,7 @@ class DingTalkAdapter(BasePlatformAdapter):
 
         self._stream_client = None
         self._session_webhooks.clear()
-        self._message_contexts.clear()
-        self._streaming_cards.clear()
-        self._done_emoji_fired.clear()
-        self._dedup.clear()
+        self._seen_messages.clear()
         logger.info("[%s] Disconnected", self.name)
 
     # -- Group gating --------------------------------------------------------
@@ -626,14 +466,16 @@ class DingTalkAdapter(BasePlatformAdapter):
 
     # -- Inbound message processing -----------------------------------------
 
-    async def _on_message(
-        self,
-        message: "ChatbotMessage",
-    ) -> None:
+    async def _on_message(self, message: "ChatbotMessage") -> None:
         """Process an incoming DingTalk chatbot message."""
         msg_id = getattr(message, "message_id", None) or uuid.uuid4().hex
-        if self._dedup.is_duplicate(msg_id):
+        if self._is_duplicate(msg_id):
             logger.debug("[%s] Duplicate message %s, skipping", self.name, msg_id)
+            return
+
+        text = self._extract_text(message)
+        if not text:
+            logger.debug("[%s] Empty message, skipping", self.name)
             return
 
         # Chat context
@@ -647,62 +489,10 @@ class DingTalkAdapter(BasePlatformAdapter):
         chat_id = conversation_id or sender_id
         chat_type = "group" if is_group else "dm"
 
-        # Allowed-users gate (applies to both DM and group)
-        if not self._is_user_allowed(sender_id, sender_staff_id):
-            logger.debug(
-                "[%s] Dropping message from non-allowlisted user staff_id=%s sender_id=%s",
-                self.name, sender_staff_id, sender_id,
-            )
-            return
-
-        # Group mention/pattern gate.  DMs pass through unconditionally.
-        # We need the message text for regex wake-word matching; extract it
-        # early but don't consume the rest of the pipeline until after the
-        # gate decides whether to process.
-        _early_text = self._extract_text(message) or ""
-        if not self._should_process_message(message, _early_text, is_group, chat_id):
-            logger.debug(
-                "[%s] Dropping group message that failed mention gate message_id=%s chat_id=%s",
-                self.name, msg_id, chat_id,
-            )
-            return
-
-        # Stash the incoming message keyed by chat_id so concurrent
-        # conversations don't clobber each other's context.  Also reset
-        # the per-chat "Done emoji fired" marker so a new inbound message
-        # gets its own Thinking→Done cycle.
-        if chat_id:
-            self._message_contexts[chat_id] = message
-            self._done_emoji_fired.discard(chat_id)
-
-        # Store session webhook
+        # Store session webhook for reply routing
         session_webhook = getattr(message, "session_webhook", None) or ""
-        session_webhook_expired_time = (
-            getattr(message, "session_webhook_expired_time", 0) or 0
-        )
-        if session_webhook and chat_id and _DINGTALK_WEBHOOK_RE.match(session_webhook):
-            if len(self._session_webhooks) >= _SESSION_WEBHOOKS_MAX:
-                try:
-                    self._session_webhooks.pop(next(iter(self._session_webhooks)))
-                except StopIteration:
-                    pass
-            self._session_webhooks[chat_id] = (
-                session_webhook,
-                session_webhook_expired_time,
-            )
-
-        # Resolve media download codes to URLs so vision tools can use them
-        await self._resolve_media_codes(message)
-
-        # Extract text content
-        text = self._extract_text(message)
-
-        # Determine message type and build media list
-        msg_type, media_urls, media_types = self._extract_media(message)
-
-        if not text and not media_urls:
-            logger.debug("[%s] Empty message, skipping", self.name)
-            return
+        if session_webhook and chat_id:
+            self._session_webhooks[chat_id] = session_webhook
 
         source = self.build_source(
             chat_id=chat_id,
@@ -716,56 +506,33 @@ class DingTalkAdapter(BasePlatformAdapter):
         # Parse timestamp
         create_at = getattr(message, "create_at", None)
         try:
-            timestamp = (
-                datetime.fromtimestamp(int(create_at) / 1000, tz=timezone.utc)
-                if create_at
-                else datetime.now(tz=timezone.utc)
-            )
+            timestamp = datetime.fromtimestamp(int(create_at) / 1000, tz=timezone.utc) if create_at else datetime.now(tz=timezone.utc)
         except (ValueError, OSError, TypeError):
             timestamp = datetime.now(tz=timezone.utc)
 
         event = MessageEvent(
             text=text,
-            message_type=msg_type,
+            message_type=MessageType.TEXT,
             source=source,
             message_id=msg_id,
             raw_message=message,
-            media_urls=media_urls,
-            media_types=media_types,
             timestamp=timestamp,
         )
 
-        logger.debug(
-            "[%s] Message from %s in %s: %s",
-            self.name,
-            sender_nick,
-            chat_id[:20] if chat_id else "?",
-            text[:80] if text else "(media)",
-        )
+        logger.debug("[%s] Message from %s in %s: %s",
+                      self.name, sender_nick, chat_id[:20] if chat_id else "?", text[:50])
         await self.handle_message(event)
 
     @staticmethod
     def _extract_text(message: "ChatbotMessage") -> str:
-        """Extract plain text from a DingTalk chatbot message.
-
-        Handles both legacy and current dingtalk-stream SDK payload shapes:
-          * legacy: ``message.text`` was a dict ``{"content": "..."}``
-          * >= 0.20: ``message.text`` is a ``TextContent`` dataclass whose
-            ``__str__`` returns ``"TextContent(content=...)"`` — never fall
-            back to ``str(text)`` without extracting ``.content`` first.
-          * rich text moved from ``message.rich_text`` (list) to
-            ``message.rich_text_content.rich_text_list`` (list of dicts).
-        """
+        """Extract plain text from a DingTalk chatbot message."""
         text = getattr(message, "text", None) or ""
-
-        # Handle TextContent object (SDK style)
-        if hasattr(text, "content"):
-            content = (text.content or "").strip()
-        elif isinstance(text, dict):
+        if isinstance(text, dict):
             content = text.get("content", "").strip()
         else:
             content = str(text).strip()
 
+        # Fall back to rich text if present
         if not content:
             rich_text = getattr(message, "rich_text_content", None) or getattr(
                 message, "rich_text", None
@@ -875,20 +642,14 @@ class DingTalkAdapter(BasePlatformAdapter):
         # LLM see the raw text — it handles "@bot hello" cleanly.
         return content
 
-    def _extract_media(self, message: "ChatbotMessage"):
-        """Extract media info from message. Returns (MessageType, [urls], [mime_types])."""
-        msg_type = MessageType.TEXT
-        media_urls = []
-        media_types = []
+    # -- Deduplication ------------------------------------------------------
 
-        # Check for image/picture
-        image_content = getattr(message, "image_content", None)
-        if image_content:
-            download_code = getattr(image_content, "download_code", None)
-            if download_code:
-                media_urls.append(download_code)
-                media_types.append("image")
-                msg_type = MessageType.PHOTO
+    def _is_duplicate(self, msg_id: str) -> bool:
+        """Check and record a message ID. Returns True if already seen."""
+        now = time.time()
+        if len(self._seen_messages) > DEDUP_MAX_SIZE:
+            cutoff = now - DEDUP_WINDOW_SECONDS
+            self._seen_messages = {k: v for k, v in self._seen_messages.items() if v > cutoff}
 
         # Check for rich text with mixed content
         rich_text = getattr(message, "rich_text_content", None) or getattr(
@@ -991,101 +752,29 @@ class DingTalkAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send a markdown reply via DingTalk session webhook."""
         metadata = metadata or {}
-        logger.debug(
-            "[%s] send() chat_id=%s card_enabled=%s",
-            self.name,
-            chat_id,
-            bool(self._card_template_id and self._card_sdk),
-        )
 
-        # Check metadata first (for direct webhook sends)
-        session_webhook = metadata.get("session_webhook")
+        session_webhook = metadata.get("session_webhook") or self._session_webhooks.get(chat_id)
         if not session_webhook:
-            webhook_info = self._get_valid_webhook(chat_id)
-            if not webhook_info:
-                logger.warning(
-                    "[%s] No valid session_webhook for chat_id=%s",
-                    self.name, chat_id,
-                )
-                return SendResult(
-                    success=False,
-                    error="No valid session_webhook available. Reply must follow an incoming message.",
-                )
-            session_webhook, _ = webhook_info
+            return SendResult(success=False,
+                              error="No session_webhook available. Reply must follow an incoming message.")
 
         if not self._http_client:
             return SendResult(success=False, error="HTTP client not initialized")
 
-        # Look up the inbound message for this chat (for AI Card routing)
-        current_message = self._message_contexts.get(chat_id)
-
-        # ``reply_to`` is the signal that this send is the FINAL response
-        # to an inbound user message — only `base.py:_send_with_retry` sets
-        # it.  Tool-progress, commentary, and stream-consumer first-sends
-        # all leave it None.  We use it for two orthogonal decisions:
-        #   1. finalize on create?  Yes if final reply, No if intermediate
-        #      (intermediate cards stay in streaming state so edit_message
-        #      updates don't flicker closed→streaming→closed repeatedly).
-        #   2. fire Done reaction?  Only when this is the final reply.
-        is_final_reply = reply_to is not None
-
-        # Try AI Card first (using alibabacloud_dingtalk.card_1_0 SDK).
-        if self._card_template_id and current_message and self._card_sdk:
-            # Close any previously-open streaming cards for this chat
-            # before creating a new one (handles tool-progress → final-
-            # response handoff; also cleans up lingering commentary cards).
-            await self._close_streaming_siblings(chat_id)
-
-            result = await self._create_and_stream_card(
-                chat_id, current_message, content,
-                finalize=is_final_reply,
-            )
-            if result and result.success:
-                if is_final_reply:
-                    # Final reply: card closed, swap Thinking → Done.
-                    self._fire_done_reaction(chat_id)
-                else:
-                    # Intermediate (tool progress / commentary / streaming
-                    # first chunk): keep the card open and track it so the
-                    # next send() auto-closes it as a sibling, or
-                    # edit_message(finalize=True) closes it explicitly.
-                    self._streaming_cards.setdefault(chat_id, {})[
-                        result.message_id
-                    ] = content
-                return result
-
-            logger.warning("[%s] AI Card send failed, falling back to webhook", self.name)
-
-        logger.debug("[%s] Sending via webhook", self.name)
-        # Normalize markdown for DingTalk
-        normalized = self._normalize_markdown(content[: self.MAX_MESSAGE_LENGTH])
-
         payload = {
             "msgtype": "markdown",
-            "markdown": {"title": "Hermes", "text": normalized},
+            "markdown": {"title": "PACE", "text": content[:self.MAX_MESSAGE_LENGTH]},
         }
 
         try:
-            resp = await self._http_client.post(
-                session_webhook, json=payload, timeout=15.0
-            )
+            resp = await self._http_client.post(session_webhook, json=payload, timeout=15.0)
             if resp.status_code < 300:
-                # Webhook path: fire Done only for final replies, same as
-                # the card path.
-                if is_final_reply:
-                    self._fire_done_reaction(chat_id)
                 return SendResult(success=True, message_id=uuid.uuid4().hex[:12])
             body = resp.text
-            logger.warning(
-                "[%s] Send failed HTTP %d: %s", self.name, resp.status_code, body[:200]
-            )
-            return SendResult(
-                success=False, error=f"HTTP {resp.status_code}: {body[:200]}"
-            )
+            logger.warning("[%s] Send failed HTTP %d: %s", self.name, resp.status_code, body[:200])
+            return SendResult(success=False, error=f"HTTP {resp.status_code}: {body[:200]}")
         except httpx.TimeoutException:
-            return SendResult(
-                success=False, error="Timeout sending message to DingTalk"
-            )
+            return SendResult(success=False, error="Timeout sending message to DingTalk")
         except Exception as e:
             logger.error("[%s] Send error: %s", self.name, e)
             return SendResult(success=False, error=str(e))
@@ -1093,67 +782,6 @@ class DingTalkAdapter(BasePlatformAdapter):
     async def send_typing(self, chat_id: str, metadata=None) -> None:
         """DingTalk does not support typing indicators."""
         pass
-
-    async def send_image(
-        self,
-        chat_id: str,
-        image_url: str,
-        caption: Optional[str] = None,
-        reply_to: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> SendResult:
-        """Send an image via DingTalk markdown.
-
-        DingTalk's session webhook only supports text/markdown payloads, not
-        native image/file attachments. For remote image URLs, render the image
-        inline with markdown so the user still sees the image. Local files need
-        OpenAPI media upload and are handled separately.
-        """
-        image_block = f"![image]({image_url})"
-        content = f"{caption}\n\n{image_block}" if caption else image_block
-        return await self.send(
-            chat_id=chat_id,
-            content=content,
-            reply_to=reply_to,
-            metadata=metadata,
-        )
-
-    async def send_image_file(
-        self,
-        chat_id: str,
-        image_path: str,
-        caption: Optional[str] = None,
-        reply_to: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> SendResult:
-        """DingTalk webhook replies cannot send local image files directly."""
-        return SendResult(
-            success=False,
-            error=(
-                "DingTalk session webhook replies do not support local image uploads. "
-                "Only markdown/text replies are supported without OpenAPI media upload."
-            ),
-        )
-
-    async def send_document(
-        self,
-        chat_id: str,
-        file_path: str,
-        caption: Optional[str] = None,
-        file_name: Optional[str] = None,
-        reply_to: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> SendResult:
-        """DingTalk webhook replies cannot send local file attachments directly."""
-        return SendResult(
-            success=False,
-            error=(
-                "DingTalk session webhook replies do not support local file attachments. "
-                "Only markdown/text replies are supported without OpenAPI message send."
-            ),
-        )
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """Return basic info about a DingTalk conversation."""
@@ -1570,98 +1198,30 @@ class DingTalkAdapter(BasePlatformAdapter):
 # Internal stream handler
 # ---------------------------------------------------------------------------
 
+class _IncomingHandler(ChatbotHandler if DINGTALK_STREAM_AVAILABLE else object):
+    """dingtalk-stream ChatbotHandler that forwards messages to the adapter."""
 
-class _IncomingHandler(
-    dingtalk_stream.ChatbotHandler if DINGTALK_STREAM_AVAILABLE else object
-):
-    """dingtalk-stream ChatbotHandler that forwards messages to the adapter.
-
-    SDK >= 0.20 changed process() from sync to async, and the message
-    parameter from ChatbotMessage to CallbackMessage. We parse the
-    CallbackMessage.data dict into a ChatbotMessage before forwarding.
-    """
-
-    def __init__(self, adapter: DingTalkAdapter, loop: Optional[asyncio.AbstractEventLoop] = None):
+    def __init__(self, adapter: DingTalkAdapter, loop: asyncio.AbstractEventLoop):
         if DINGTALK_STREAM_AVAILABLE:
             super().__init__()
         self._adapter = adapter
         self._loop = loop
 
-    def pre_start(self) -> None:
-        """No-op pre-start hook required by dingtalk-stream SDK.
+    def process(self, message: "ChatbotMessage"):
+        """Called by dingtalk-stream in its thread when a message arrives.
 
-        The SDK calls ``pre_start()`` on every registered handler before
-        opening the WebSocket connection.  Without this method, the SDK
-        raises ``AttributeError: '_IncomingHandler' object has no
-        attribute 'pre_start'`` and kills the stream connection.
+        Schedules the async handler on the main event loop.
         """
-        return
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            logger.error("[DingTalk] Event loop unavailable, cannot dispatch message")
+            return dingtalk_stream.AckMessage.STATUS_OK, "OK"
 
-    async def process(self, message: "CallbackMessage"):
-        """Called by dingtalk-stream (>=0.20) when a message arrives.
-
-        dingtalk-stream >= 0.24 passes a CallbackMessage whose ``.data`` contains
-        the chatbot payload. Convert it to ChatbotMessage via
-        ``ChatbotMessage.from_dict()``.
-
-        Message processing is dispatched as a background task so that this
-        method returns the ACK immediately — blocking here would prevent the
-        SDK from sending heartbeats, eventually causing a disconnect.
-        """
+        future = asyncio.run_coroutine_threadsafe(self._adapter._on_message(message), loop)
         try:
-            # CallbackMessage.data is a dict containing the raw DingTalk payload
-            data = message.data
-            if isinstance(data, str):
-                data = json.loads(data)
-
-            # Parse dict into ChatbotMessage using SDK's from_dict
-            chatbot_msg = ChatbotMessage.from_dict(data)
-
-            # Ensure session_webhook is populated even if the SDK's
-            # from_dict() did not map it (field name mismatch across
-            # SDK versions).
-            if not getattr(chatbot_msg, "session_webhook", None):
-                webhook = (
-                    data.get("sessionWebhook")
-                    or data.get("session_webhook")
-                    or ""
-                ) if isinstance(data, dict) else ""
-                if webhook:
-                    chatbot_msg.session_webhook = webhook
-
-            # Ensure is_in_at_list is populated from the structured callback
-            # flag even if from_dict() did not map it.  DingTalk sends
-            # ``isInAtList`` in the raw payload; the adapter's mention check
-            # reads the ChatbotMessage attribute ``is_in_at_list``.
-            if not getattr(chatbot_msg, "is_in_at_list", False):
-                raw_flag = (
-                    data.get("isInAtList") if isinstance(data, dict) else False
-                )
-                if raw_flag:
-                    chatbot_msg.is_in_at_list = True
-
-            msg_id = getattr(chatbot_msg, "message_id", None) or ""
-            conversation_id = getattr(chatbot_msg, "conversation_id", None) or ""
-
-            # Thinking reaction — fire-and-forget, tracked
-            if msg_id and conversation_id:
-                self._adapter._spawn_bg(
-                    self._adapter._send_emotion(
-                        msg_id, conversation_id, "🤔Thinking", recall=False,
-                    )
-                )
-
-            # Fire-and-forget: return ACK immediately, process in background.
-            # Blocking here would prevent the SDK from sending heartbeats,
-            # eventually causing a disconnect.  _on_message is wrapped so
-            # exceptions inside the task surface in logs instead of
-            # disappearing into the event loop.
-            asyncio.create_task(self._safe_on_message(chatbot_msg))
+            future.result(timeout=60)
         except Exception:
-            logger.exception(
-                "[%s] Error preparing incoming message", self._adapter.name
-            )
-            return AckMessage.STATUS_SYSTEM_EXCEPTION, "error"
+            logger.exception("[DingTalk] Error processing incoming message")
 
         return AckMessage.STATUS_OK, "OK"
 
