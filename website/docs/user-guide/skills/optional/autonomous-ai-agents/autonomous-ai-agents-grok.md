@@ -14,14 +14,14 @@ Delegate coding to xAI Grok Build CLI (features, PRs).
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/autonomous-ai-agents/grok` |
+| Source | Optional — install with `pace skills install official/autonomous-ai-agents/grok` |
 | Path | `optional-skills/autonomous-ai-agents/grok` |
 | Version | `0.1.1` |
 | Author | Matt Maximo (MattMaximo), Hermes Agent |
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `Coding-Agent`, `Grok`, `xAI`, `Code-Review`, `Refactoring`, `Automation` |
-| Related skills | [`codex`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-codex), [`claude-code`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-claude-code), [`hermes-agent`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-hermes-agent) |
+| Related skills | [`codex`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-codex), [`claude-code`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-claude-code), [`pace-agent`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-pace-agent) |
 
 ## Reference: full SKILL.md
 

@@ -14,7 +14,7 @@ Hybrid local search over notes, docs, and transcripts.
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/research/qmd` |
+| Source | Optional — install with `pace skills install official/research/qmd` |
 | Path | `optional-skills/research/qmd` |
 | Version | `1.0.0` |
 | Author | Hermes Agent + Teknium |
@@ -244,7 +244,7 @@ without needing to load this skill.
 
 ### Option A: Stdio Mode (Simple)
 
-Add to `~/.hermes/config.yaml`:
+Add to `~/.pace/config.yaml`:
 
 ```yaml
 mcp_servers:

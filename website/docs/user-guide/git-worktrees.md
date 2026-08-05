@@ -20,8 +20,8 @@ This page shows how to combine worktrees with Hermes so each session has a clean
 
 Hermes treats the **current working directory** as the project root:
 
-- CLI: the directory where you run `hermes` or `hermes chat`
-- Messaging gateways: the directory set by `terminal.cwd` in `~/.hermes/config.yaml`
+- CLI: the directory where you run `pace` or `pace chat`
+- Messaging gateways: the directory set by `terminal.cwd` in `~/.pace/config.yaml`
 
 If you run multiple agents in the **same checkout**, their changes can interfere with each other:
 
@@ -58,7 +58,7 @@ Now you can `cd` into the new worktree and run Hermes there:
 cd ../repo-feature
 
 # Start Hermes in the worktree
-hermes
+pace
 ```
 
 Hermes will:
@@ -83,11 +83,11 @@ In separate terminals:
 ```bash
 # Terminal 1
 cd ../repo-experiment-a
-hermes
+pace
 
 # Terminal 2
 cd ../repo-experiment-b
-hermes
+pace
 ```
 
 Each Hermes process:
@@ -122,7 +122,7 @@ Notes:
 
 - `git worktree remove` will refuse to remove a worktree with uncommitted changes unless you force it.
 - Removing a worktree does **not** automatically delete the branch; you can delete or keep the branch using normal `git branch` commands.
-- Hermes checkpoint data under `~/.hermes/checkpoints/` is not automatically pruned when you remove a worktree, but it is usually very small.
+- Hermes checkpoint data under `~/.pace/checkpoints/` is not automatically pruned when you remove a worktree, but it is usually very small.
 
 ## Best Practices
 
@@ -137,19 +137,19 @@ Notes:
 - **Avoid running Hermes from the bare repo root when using worktrees**
   - Prefer the worktree directories instead, so each agent has a clear scope.
 
-## Using `hermes -w` (Automatic Worktree Mode)
+## Using `pace -w` (Automatic Worktree Mode)
 
 Hermes has a built‑in `-w` flag that **automatically creates a disposable git worktree** with its own branch. You don't need to set up worktrees manually — just `cd` into your repo and run:
 
 ```bash
 cd /path/to/your/repo
-hermes -w
+pace -w
 ```
 
 Hermes will:
 
 - Create a temporary worktree under `.worktrees/` inside your repo.
-- Check out an isolated branch (e.g. `hermes/hermes-<hash>`).
+- Check out an isolated branch (e.g. `pace/hermes-<hash>`).
 - Run the full CLI session inside that worktree.
 
 This is the easiest way to get worktree isolation. You can also combine it with a single query:
@@ -158,7 +158,7 @@ This is the easiest way to get worktree isolation. You can also combine it with 
 hermes -w -z "Fix issue #123"
 ```
 
-For parallel agents, open multiple terminals and run `hermes -w` in each — every invocation gets its own worktree and branch automatically.
+For parallel agents, open multiple terminals and run `pace -w` in each — every invocation gets its own worktree and branch automatically.
 
 ## Putting It All Together
 

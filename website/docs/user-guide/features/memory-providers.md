@@ -11,14 +11,14 @@ Hermes Agent ships with 8 external memory provider plugins that give the agent p
 ## Quick Start
 
 ```bash
-hermes memory setup      # interactive picker + configuration
-hermes memory status     # check what's active
-hermes memory off        # disable external provider
+pace memory setup      # interactive picker + configuration
+pace memory status     # check what's active
+pace memory off        # disable external provider
 ```
 
-You can also select the active memory provider via `hermes plugins` → Provider Plugins → Memory Provider.
+You can also select the active memory provider via `pace plugins` → Provider Plugins → Memory Provider.
 
-Or set manually in `~/.hermes/config.yaml`:
+Or set manually in `~/.pace/config.yaml`:
 
 ```yaml
 memory:
@@ -65,14 +65,14 @@ The auto-injected dialectic also scales its reasoning level by query length (lon
 
 **Setup Wizard:**
 ```bash
-hermes memory setup        # select "honcho" — runs the Honcho-specific post-setup
+pace memory setup        # select "honcho" — runs the Honcho-specific post-setup
 ```
 
 The legacy `hermes honcho setup` command still works (it now redirects to `hermes memory setup`), but is only registered after Honcho is selected as the active memory provider.
 
 **Headless / remote machines:** for cloud auth on a box without a browser (SSH, remote VM), pick **device** at the wizard's auth-method prompt. The CLI prints a short code and a verification link; open the link in a browser on any other machine, approve, and setup completes — no API key copy-paste. The wizard defaults to this option automatically when it detects no usable local browser.
 
-**Config:** `$HERMES_HOME/honcho.json` (profile-local) or `~/.honcho/config.json` (global). Resolution order: `$HERMES_HOME/honcho.json` > `~/.hermes/honcho.json` > `~/.honcho/config.json`. See the [config reference](https://github.com/NousResearch/hermes-agent/blob/main/plugins/memory/honcho/README.md) and the [Honcho integration guide](https://docs.honcho.dev/v3/guides/integrations/hermes).
+**Config:** `$HERMES_HOME/honcho.json` (profile-local) or `~/.honcho/config.json` (global). Resolution order: `$HERMES_HOME/honcho.json` > `~/.pace/honcho.json` > `~/.honcho/config.json`. See the [config reference](https://github.com/NousResearch/pace-agent/blob/main/plugins/memory/honcho/README.md) and the [Honcho integration guide](https://docs.honcho.dev/v3/guides/integrations/pace).
 
 <details>
 <summary>Full config reference</summary>
@@ -112,11 +112,11 @@ The legacy `hermes honcho setup` command still works (it now redirects to `herme
 {
   "apiKey": "your-key-from-app.honcho.dev",
   "hosts": {
-    "hermes": {
+    "pace": {
       "enabled": true,
-      "aiPeer": "hermes",
+      "aiPeer": "pace",
       "peerName": "your-name",
-      "workspace": "hermes"
+      "workspace": "pace"
     }
   }
 }
@@ -131,11 +131,11 @@ The legacy `hermes honcho setup` command still works (it now redirects to `herme
 {
   "baseUrl": "http://localhost:8000",
   "hosts": {
-    "hermes": {
+    "pace": {
       "enabled": true,
-      "aiPeer": "hermes",
+      "aiPeer": "pace",
       "peerName": "your-name",
-      "workspace": "hermes"
+      "workspace": "pace"
     }
   }
 }
@@ -143,8 +143,8 @@ The legacy `hermes honcho setup` command still works (it now redirects to `herme
 
 </details>
 
-:::tip Migrating from `hermes honcho`
-If you previously used `hermes honcho setup`, your config and all server-side data are intact. Just re-enable through the setup wizard again or manually set `memory.provider: honcho` to reactivate via the new system.
+:::tip Migrating from `pace honcho`
+If you previously used `pace honcho setup`, your config and all server-side data are intact. Just re-enable through the setup wizard again or manually set `memory.provider: honcho` to reactivate via the new system.
 :::
 
 **Multi-peer setup:**
@@ -157,31 +157,31 @@ The mapping:
 |---------|-----------|
 | **Workspace** | Shared environment. All Hermes profiles under one workspace see the same user identity. |
 | **User peer** (`peerName`) | The human. Shared across profiles in the workspace. |
-| **AI peer** (`aiPeer`) | One per Hermes profile. Host key `hermes` → default; `hermes.<profile>` for others. |
+| **AI peer** (`aiPeer`) | One per Hermes profile. Host key `pace` → default; `pace.<profile>` for others. |
 | **Observation** | Per-peer toggles controlling what Honcho models from whose messages. `directional` (default, all four on) or `unified` (single-observer pool). |
 
 ### New profile, fresh Honcho peer
 
 ```bash
-hermes profile create coder --clone
+pace profile create coder --clone
 ```
 
-`--clone` creates a `hermes.coder` host block in `honcho.json` with `aiPeer: "coder"`, shared `workspace`, inherited `peerName`, `recallMode`, `writeFrequency`, `observation`, etc. The AI peer is eagerly created in Honcho so it exists before the first message.
+`--clone` creates a `pace.coder` host block in `honcho.json` with `aiPeer: "coder"`, shared `workspace`, inherited `peerName`, `recallMode`, `writeFrequency`, `observation`, etc. The AI peer is eagerly created in Honcho so it exists before the first message.
 
 ### Existing profiles, backfill Honcho peers
 
 ```bash
-hermes honcho sync
+pace honcho sync
 ```
 
-Scans every Hermes profile, creates host blocks for any profile without one, inherits settings from the default `hermes` block, and creates the new AI peers eagerly. Idempotent — skips profiles that already have a host block.
+Scans every Hermes profile, creates host blocks for any profile without one, inherits settings from the default `pace` block, and creates the new AI peers eagerly. Idempotent — skips profiles that already have a host block.
 
 ### Per-profile observation
 
 Each host block can override the observation config independently. Example: a code-focused profile where the AI peer observes the user but doesn't self-model:
 
 ```json
-"hermes.coder": {
+"pace.coder": {
   "aiPeer": "coder",
   "observation": {
     "user": { "observeMe": true, "observeOthers": true },
@@ -224,13 +224,13 @@ Off-gateway these keys do nothing. `hermes memory setup` only prompts for them w
 ```json
 {
   "apiKey": "your-key",
-  "workspace": "hermes",
+  "workspace": "pace",
   "peerName": "eri",
   "hosts": {
-    "hermes": {
+    "pace": {
       "enabled": true,
-      "aiPeer": "hermes",
-      "workspace": "hermes",
+      "aiPeer": "pace",
+      "workspace": "pace",
       "peerName": "eri",
       "recallMode": "hybrid",
       "writeFrequency": "async",
@@ -248,10 +248,10 @@ Off-gateway these keys do nothing. `hermes memory setup` only prompts for them w
       "messageMaxChars": 25000,
       "saveMessages": true
     },
-    "hermes.coder": {
+    "pace.coder": {
       "enabled": true,
       "aiPeer": "coder",
-      "workspace": "hermes",
+      "workspace": "pace",
       "peerName": "eri",
       "recallMode": "tools",
       "observation": {
@@ -259,10 +259,10 @@ Off-gateway these keys do nothing. `hermes memory setup` only prompts for them w
         "ai": { "observeMe": true, "observeOthers": true }
       }
     },
-    "hermes.writer": {
+    "pace.writer": {
       "enabled": true,
       "aiPeer": "writer",
-      "workspace": "hermes",
+      "workspace": "pace",
       "peerName": "eri"
     }
   },
@@ -274,7 +274,7 @@ Off-gateway these keys do nothing. `hermes memory setup` only prompts for them w
 
 </details>
 
-See the [config reference](https://github.com/NousResearch/hermes-agent/blob/main/plugins/memory/honcho/README.md) and [Honcho integration guide](https://docs.honcho.dev/v3/guides/integrations/hermes).
+See the [config reference](https://github.com/NousResearch/pace-agent/blob/main/plugins/memory/honcho/README.md) and [Honcho integration guide](https://docs.honcho.dev/v3/guides/integrations/pace).
 
 
 ---
@@ -300,7 +300,7 @@ openviking-server doctor
 openviking-server
 
 # Then configure Hermes
-hermes memory setup    # select "openviking"
+pace memory setup    # select "openviking"
 # Or manually:
 hermes config set memory.provider openviking
 ```
@@ -350,8 +350,8 @@ Server-side LLM fact extraction with semantic search, reranking, and automatic d
 ```bash
 hermes memory setup    # select "mem0" → "Platform"
 # Or manually:
-hermes config set memory.provider mem0
-echo "MEM0_API_KEY=your-key" >> ~/.hermes/.env
+pace config set memory.provider mem0
+echo "MEM0_API_KEY=your-key" >> ~/.pace/.env
 ```
 
 **Setup (OSS):**
@@ -426,22 +426,22 @@ Long-term memory with knowledge graph, entity resolution, and multi-strategy ret
 
 **Setup:**
 ```bash
-hermes memory setup    # select "hindsight"
+pace memory setup    # select "hindsight"
 # Or manually:
-hermes config set memory.provider hindsight
-echo "HINDSIGHT_API_KEY=your-key" >> ~/.hermes/.env
+pace config set memory.provider hindsight
+echo "HINDSIGHT_API_KEY=your-key" >> ~/.pace/.env
 ```
 
 The setup wizard installs dependencies automatically and only installs what's needed for the selected mode (`hindsight-client` for cloud, `hindsight-all` for local). Requires `hindsight-client >= 0.4.22` (auto-upgraded on session start if outdated).
 
-**Local mode UI:** `hindsight-embed -p hermes ui start`
+**Local mode UI:** `hindsight-embed -p pace ui start`
 
 **Config:** `$HERMES_HOME/hindsight/config.json`
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `mode` | `cloud` | `cloud` or `local` |
-| `bank_id` | `hermes` | Memory bank identifier |
+| `bank_id` | `pace` | Memory bank identifier |
 | `recall_budget` | `mid` | Recall thoroughness: `low` / `mid` / `high` |
 | `memory_mode` | `hybrid` | `hybrid` (context + tools), `context` (auto-inject only), `tools` (tools only) |
 | `auto_retain` | `true` | Automatically retain conversation turns |
@@ -454,7 +454,7 @@ The setup wizard installs dependencies automatically and only installs what's ne
 | `retain_assistant_prefix` | `Assistant` | Label used before assistant turns in auto-retained transcripts |
 | `recall_tags` | — | Tags to filter on recall |
 
-See [plugin README](https://github.com/NousResearch/hermes-agent/blob/main/plugins/memory/hindsight/README.md) for the full configuration reference.
+See [plugin README](https://github.com/NousResearch/pace-agent/blob/main/plugins/memory/hindsight/README.md) for the full configuration reference.
 
 ---
 
@@ -473,9 +473,9 @@ Local SQLite fact store with FTS5 full-text search, trust scoring, and HRR (Holo
 
 **Setup:**
 ```bash
-hermes memory setup    # select "holographic"
+pace memory setup    # select "holographic"
 # Or manually:
-hermes config set memory.provider holographic
+pace config set memory.provider holographic
 ```
 
 **Config:** `config.yaml` under `plugins.hermes-memory-store`
@@ -509,10 +509,10 @@ Cloud memory API with hybrid search (Vector + BM25 + Reranking), 7 memory types,
 
 **Setup:**
 ```bash
-hermes memory setup    # select "retaindb"
+pace memory setup    # select "retaindb"
 # Or manually:
-hermes config set memory.provider retaindb
-echo "RETAINDB_API_KEY=your-key" >> ~/.hermes/.env
+pace config set memory.provider retaindb
+echo "RETAINDB_API_KEY=your-key" >> ~/.pace/.env
 ```
 
 ---
@@ -536,9 +536,9 @@ Persistent memory via the `brv` CLI — hierarchical knowledge tree with tiered 
 curl -fsSL https://byterover.dev/install.sh | sh
 
 # Then configure Hermes
-hermes memory setup    # select "byterover"
+pace memory setup    # select "byterover"
 # Or manually:
-hermes config set memory.provider byterover
+pace config set memory.provider byterover
 ```
 
 **Key features:**
@@ -563,10 +563,10 @@ Semantic long-term memory with profile recall, semantic search, explicit memory 
 
 **Setup:**
 ```bash
-hermes memory setup    # select "supermemory"
+pace memory setup    # select "supermemory"
 # Or manually:
-hermes config set memory.provider supermemory
-echo 'SUPERMEMORY_API_KEY=***' >> ~/.hermes/.env
+pace config set memory.provider supermemory
+echo 'SUPERMEMORY_API_KEY=***' >> ~/.pace/.env
 ```
 
 Self-hosted setup:
@@ -620,7 +620,7 @@ Base URL precedence is `supermemory.json` → `SUPERMEMORY_BASE_URL` → `https:
 
 ```json
 {
-  "container_tag": "hermes",
+  "container_tag": "pace",
   "enable_custom_container_tags": true,
   "custom_containers": ["project-alpha", "shared-knowledge"],
   "custom_container_instructions": "Use project-alpha for coding context."
@@ -648,8 +648,8 @@ Structured long-term memory using Memori Cloud, with background completed-turn c
 ```bash
 pip install hermes-memori
 hermes-memori install
-hermes config set memory.provider memori
-hermes memory setup
+pace config set memory.provider memori
+pace memory setup
 ```
 
 ---

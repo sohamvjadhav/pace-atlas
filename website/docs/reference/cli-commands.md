@@ -13,7 +13,7 @@ For in-chat slash commands, see [Slash Commands Reference](./slash-commands.md).
 ## Global entrypoint
 
 ```bash
-hermes [global-options] <command> [subcommand/options]
+pace [global-options] <command> [subcommand/options]
 ```
 
 ### Global options
@@ -21,13 +21,13 @@ hermes [global-options] <command> [subcommand/options]
 | Option | Description |
 |--------|-------------|
 | `--version`, `-V` | Show version and exit. |
-| `--profile <name>`, `-p <name>` | Select which Hermes profile to use for this invocation. Overrides the sticky default set by `hermes profile use`. |
+| `--profile <name>`, `-p <name>` | Select which Hermes profile to use for this invocation. Overrides the sticky default set by `pace profile use`. |
 | `--resume <session>`, `-r <session>` | Resume a previous session by ID or title. |
 | `--continue [name]`, `-c [name]` | Resume the most recent session, or the most recent session matching a title. |
 | `--worktree`, `-w` | Start in an isolated git worktree for parallel-agent workflows. |
 | `--yolo` | Bypass dangerous-command approval prompts. |
 | `--pass-session-id` | Include the session ID in the agent's system prompt. |
-| `--ignore-user-config` | Ignore `~/.hermes/config.yaml` and fall back to built-in defaults. Credentials in `.env` are still loaded. |
+| `--ignore-user-config` | Ignore `~/.pace/config.yaml` and fall back to built-in defaults. Credentials in `.env` are still loaded. |
 | `--ignore-rules` | Skip auto-injection of `AGENTS.md`, `SOUL.md`, `.cursorrules`, memory, and preloaded skills. |
 | `--tui` | Launch the [TUI](../user-guide/tui.md) instead of the classic CLI. Equivalent to `HERMES_TUI=1`. Always wins over `display.interface`. |
 | `--cli` | Force the classic prompt_toolkit REPL. Use this to override `display.interface: tui` for a single invocation. |
@@ -99,10 +99,10 @@ hermes [global-options] <command> [subcommand/options]
 | `hermes update` | Pull latest code and reinstall dependencies. `--check` previews without installing; `--backup` takes a pre-pull `HERMES_HOME` snapshot. |
 | `hermes uninstall` | Remove Hermes from the system. |
 
-## `hermes chat`
+## `pace chat`
 
 ```bash
-hermes chat [options]
+pace chat [options]
 ```
 
 Common options:
@@ -122,7 +122,7 @@ Common options:
 | `--checkpoints` | Enable filesystem checkpoints before destructive file changes. |
 | `--yolo` | Skip approval prompts. |
 | `--pass-session-id` | Pass the session ID into the system prompt. |
-| `--ignore-user-config` | Ignore `~/.hermes/config.yaml` and use built-in defaults. Credentials in `.env` are still loaded. Useful for isolated CI runs, reproducible bug reports, and third-party integrations. |
+| `--ignore-user-config` | Ignore `~/.pace/config.yaml` and use built-in defaults. Credentials in `.env` are still loaded. Useful for isolated CI runs, reproducible bug reports, and third-party integrations. |
 | `--ignore-rules` | Skip auto-injection of `AGENTS.md`, `SOUL.md`, `.cursorrules`, persistent memory, and preloaded skills. Combine with `--ignore-user-config` for a fully isolated run. |
 | `--safe-mode` | Troubleshooting mode: disable ALL customizations — user config, rules/memory injection, plugins, shell hooks, and MCP servers (implies `--ignore-user-config` and `--ignore-rules`). Use to isolate whether a problem comes from your setup or from Hermes itself. |
 | `--source <tag>` | Session source tag for filtering (default: `cli`). Use `tool` for third-party integrations that should not appear in user session lists. |
@@ -141,19 +141,19 @@ hermes chat --ignore-user-config --ignore-rules -q "Repro without my personal se
 hermes chat --safe-mode -q "Is this bug mine or Hermes'?"
 ```
 
-### `hermes -z <prompt>` — scripted one-shot
+### `pace -z <prompt>` — scripted one-shot
 
-For programmatic callers (shell scripts, CI, cron, parent processes piping in a prompt), `hermes -z` is the purest one-shot entry point: **single prompt in, final response text out, nothing else on stdout or stderr.** No banner, no spinner, no tool previews, no `Session:` line — just the agent's final reply as plain text.
+For programmatic callers (shell scripts, CI, cron, parent processes piping in a prompt), `pace -z` is the purest one-shot entry point: **single prompt in, final response text out, nothing else on stdout or stderr.** No banner, no spinner, no tool previews, no `Session:` line — just the agent's final reply as plain text.
 
 ```bash
-hermes -z "What's the capital of France?"
+pace -z "What's the capital of France?"
 # → Paris.
 
 # Parent scripts can cleanly capture the response:
-answer=$(hermes -z "summarize this" < /path/to/file.txt)
+answer=$(pace -z "summarize this" < /path/to/file.txt)
 ```
 
-Per-run overrides (no mutation to `~/.hermes/config.yaml`):
+Per-run overrides (no mutation to `~/.pace/config.yaml`):
 
 | Flag | Equivalent env var | Purpose |
 |---|---|---|
@@ -162,12 +162,12 @@ Per-run overrides (no mutation to `~/.hermes/config.yaml`):
 | `--usage-file <path>` | _(none)_ | Write a JSON usage report after the run (see below) |
 
 ```bash
-hermes -z "…" --provider openrouter --model openai/gpt-5.5
+pace -z "…" --provider openrouter --model openai/gpt-5.5
 # or:
-HERMES_INFERENCE_MODEL=anthropic/claude-sonnet-4.6 hermes -z "…"
+HERMES_INFERENCE_MODEL=anthropic/claude-sonnet-4.6 pace -z "…"
 ```
 
-Same agent, same tools, same skills — just strips every interactive / cosmetic layer. If you need tool output in the transcript too, use `hermes chat -q` instead; `-z` is explicitly for "I only want the final answer".
+Same agent, same tools, same skills — just strips every interactive / cosmetic layer. If you need tool output in the transcript too, use `pace chat -q` instead; `-z` is explicitly for "I only want the final answer".
 
 #### `--usage-file` — JSON usage report for pipelines
 
@@ -183,7 +183,7 @@ jq .estimated_cost_usd /tmp/usage.json
 Interactive provider + model selector. **This is the command for adding new providers, setting up API keys, and running OAuth flows.** Run it from your terminal — not from inside an active Hermes chat session.
 
 ```bash
-hermes model
+pace model
 ```
 
 Use this when you want to:
@@ -194,12 +194,12 @@ Use this when you want to:
 - configure a custom/self-hosted endpoint
 - save the new default into config
 
-:::warning hermes model vs /model — know the difference
-**`hermes model`** (run from your terminal, outside any Hermes session) is the **full provider setup wizard**. It can add new providers, run OAuth flows, prompt for API keys, and configure endpoints.
+:::warning pace model vs /model — know the difference
+**`pace model`** (run from your terminal, outside any Hermes session) is the **full provider setup wizard**. It can add new providers, run OAuth flows, prompt for API keys, and configure endpoints.
 
 **`/model`** (typed inside an active Hermes chat session) can only **switch between providers and models you've already set up**. It cannot add new providers, run OAuth, or prompt for API keys.
 
-**If you need to add a new provider:** Exit your Hermes session first (`Ctrl+C` or `/quit`), then run `hermes model` from your terminal prompt.
+**If you need to add a new provider:** Exit your Hermes session first (`Ctrl+C` or `/quit`), then run `pace model` from your terminal prompt.
 :::
 
 ### `/model` slash command (mid-session)
@@ -223,15 +223,15 @@ By default, `/model` changes apply **to the current session only**. Add `--globa
 ```
 
 :::info What if I only see OpenRouter models?
-If you've only configured OpenRouter, `/model` will only show OpenRouter models. To add another provider (Anthropic, DeepSeek, Copilot, etc.), exit your session and run `hermes model` from the terminal.
+If you've only configured OpenRouter, `/model` will only show OpenRouter models. To add another provider (Anthropic, DeepSeek, Copilot, etc.), exit your session and run `pace model` from the terminal.
 :::
 
 On a `--global` switch, provider and base URL changes are persisted to `config.yaml` alongside the model. When switching away from a custom endpoint, the stale base URL is cleared to prevent it leaking into other providers.
 
-## `hermes gateway`
+## `pace gateway`
 
 ```bash
-hermes gateway <subcommand>
+pace gateway <subcommand>
 ```
 
 Subcommands:
@@ -254,7 +254,7 @@ Options:
 
 | Option | Description |
 |--------|-------------|
-| `--all` | On `start` / `restart` / `stop`: act on **every profile's** gateway, not just the active `HERMES_HOME`. Useful if you run multiple profiles side-by-side and want to restart them all after `hermes update`. |
+| `--all` | On `start` / `restart` / `stop`: act on **every profile's** gateway, not just the active `HERMES_HOME`. Useful if you run multiple profiles side-by-side and want to restart them all after `pace update`. |
 | `--no-supervise` | On `run`: inside the s6-overlay Docker image, opt out of auto-supervision and use pre-s6 foreground semantics — gateway runs as the container's main process with no auto-restart. No-op outside the s6 image. Equivalent to setting `HERMES_GATEWAY_NO_SUPERVISE=1`. |
 | `--external-supervisor` | On `run`: declare that a wrapper-provided process manager owns the foreground gateway. Use this when `sudo`, `env -i`, or another wrapper strips launchd/systemd's native environment marker. In-chat restarts and updates exit back to that manager instead of spawning a detached replacement. |
 
@@ -269,13 +269,13 @@ stopped.
 `hermes gateway enroll` accepts `--token`, `--connector-url`, `--gateway-id`, and `--wake-url`. It exchanges the enrollment token with the connector and writes the resulting `GATEWAY_RELAY_ID`, `GATEWAY_RELAY_SECRET`, `GATEWAY_RELAY_DELIVERY_KEY`, optional `GATEWAY_RELAY_URL`, and (when `--wake-url` is given) `GATEWAY_RELAY_WAKE_URL` values to the active profile's `.env`.
 
 :::tip WSL users
-Use `hermes gateway run` instead of `hermes gateway start` — WSL's systemd support is unreliable. Wrap it in tmux for persistence: `tmux new -s hermes 'hermes gateway run'`. See [WSL FAQ](/reference/faq#wsl-gateway-keeps-disconnecting-or-hermes-gateway-start-fails) for details.
+Use `pace gateway run` instead of `pace gateway start` — WSL's systemd support is unreliable. Wrap it in tmux for persistence: `tmux new -s pace 'pace gateway run'`. See [WSL FAQ](/reference/faq#wsl-gateway-keeps-disconnecting-or-hermes-gateway-start-fails) for details.
 :::
 
-## `hermes lsp`
+## `pace lsp`
 
 ```bash
-hermes lsp <subcommand>
+pace lsp <subcommand>
 ```
 
 Manage the Language Server Protocol integration. LSP runs real
@@ -299,13 +299,13 @@ Subcommands:
 See [LSP — Semantic Diagnostics](/user-guide/features/lsp) for
 the full guide, supported languages, and configuration knobs.
 
-## `hermes setup`
+## `pace setup`
 
 ```bash
-hermes setup [model|tts|terminal|gateway|tools|agent] [--non-interactive] [--reset] [--quick] [--reconfigure] [--portal]
+pace setup [model|tts|terminal|gateway|tools|agent] [--non-interactive] [--reset] [--quick] [--reconfigure] [--portal]
 ```
 
-**Easiest path:** `hermes setup --portal` — OAuth into Nous Portal and opt into the [Tool Gateway](../user-guide/features/tool-gateway.md) in one shot.
+**Easiest path:** `pace setup --portal` — OAuth into Nous Portal and opt into the [Tool Gateway](../user-guide/features/tool-gateway.md) in one shot.
 
 **First run:** launches the first-time wizard.
 
@@ -328,13 +328,13 @@ Options:
 | `--quick` | On returning-user runs: only prompt for items that are missing or unset. Skip items you already have configured. |
 | `--non-interactive` | Use defaults / environment values without prompts. |
 | `--reset` | Reset configuration to defaults before setup. |
-| `--reconfigure` | Backwards-compat alias — bare `hermes setup` on an existing install now does this by default. |
+| `--reconfigure` | Backwards-compat alias — bare `pace setup` on an existing install now does this by default. |
 | `--portal` | One-shot Nous Portal setup: log in via OAuth, set Nous as the inference provider, and opt into the [Tool Gateway](../user-guide/features/tool-gateway.md). Skips the rest of the wizard. |
 
-## `hermes portal`
+## `pace portal`
 
 ```bash
-hermes portal [status|open|tools]
+pace portal [status|open|tools]
 ```
 
 Inspect Nous Portal auth, Tool Gateway routing, and reach the subscription page. Subcommand-less invocation runs `status`.
@@ -345,17 +345,17 @@ Inspect Nous Portal auth, Tool Gateway routing, and reach the subscription page.
 | `open` | Open `portal.nousresearch.com/manage-subscription` in your default browser. |
 | `tools` | List every Tool Gateway partner (Firecrawl, FAL, OpenAI TTS, Browser Use, Modal) and which are routed via Nous. |
 
-For configuration of the gateway itself, see [Tool Gateway](../user-guide/features/tool-gateway.md). For the one-shot setup path, see `hermes setup --portal` above.
+For configuration of the gateway itself, see [Tool Gateway](../user-guide/features/tool-gateway.md). For the one-shot setup path, see `pace setup --portal` above.
 
-## `hermes whatsapp`
+## `pace whatsapp`
 
 ```bash
-hermes whatsapp
+pace whatsapp
 ```
 
 Runs the WhatsApp pairing/setup flow, including mode selection and QR-code pairing.
 
-## `hermes slack`
+## `pace slack`
 
 ```bash
 hermes slack manifest              # print manifest to stdout
@@ -381,22 +381,22 @@ reinstall if scopes or slash commands changed.
 | `--long-description-file PATH` | unset | Read the long description from a UTF-8 text file, preserving its contents exactly. Mutually exclusive with `--long-description` and incompatible with `--slashes-only`. |
 | `--slashes-only` | off | Emit only `features.slash_commands` for merging into a manually-maintained manifest. |
 
-Run `hermes slack manifest --write` again after `hermes update` to pick
+Run `pace slack manifest --write` again after `pace update` to pick
 up any new commands.
 
 
-## `hermes send`
+## `pace send`
 
 ```bash
-hermes send --to <target> "message text"
-hermes send --to <target> --file <path>
-echo "message" | hermes send --to <target>
-hermes send --list [platform]
+pace send --to <target> "message text"
+pace send --to <target> --file <path>
+echo "message" | pace send --to <target>
+pace send --list [platform]
 ```
 
-Send a one-shot message to a configured messaging platform without spinning up an agent or gateway loop. Reuses the gateway's already-configured credentials (`~/.hermes/.env` + `~/.hermes/config.yaml`) so ops scripts, cron jobs, CI hooks, and monitoring daemons can post status updates without reimplementing each platform's REST client.
+Send a one-shot message to a configured messaging platform without spinning up an agent or gateway loop. Reuses the gateway's already-configured credentials (`~/.pace/.env` + `~/.pace/config.yaml`) so ops scripts, cron jobs, CI hooks, and monitoring daemons can post status updates without reimplementing each platform's REST client.
 
-For bot-token platforms (Telegram, Discord, Slack, Signal, SMS, WhatsApp-CloudAPI) no running gateway is required — `hermes send` talks directly to the platform's REST endpoint. Plugin platforms that need a persistent adapter still require a live gateway.
+For bot-token platforms (Telegram, Discord, Slack, Signal, SMS, WhatsApp-CloudAPI) no running gateway is required — `pace send` talks directly to the platform's REST endpoint. Plugin platforms that need a persistent adapter still require a live gateway.
 
 | Option | Description |
 |--------|-------------|
@@ -407,7 +407,7 @@ For bot-token platforms (Telegram, Discord, Slack, Signal, SMS, WhatsApp-CloudAP
 | `-q`, `--quiet` | Suppress stdout on success — useful in scripts (rely on exit code only). |
 | `--json` | Emit raw JSON result instead of human-readable output. |
 
-If neither a positional `message` argument nor `--file` is provided, `hermes send` reads from stdin when it is not a TTY. Exit codes: `0` on success, `1` on delivery/backend failure, `2` on usage errors.
+If neither a positional `message` argument nor `--file` is provided, `pace send` reads from stdin when it is not a TTY. Exit codes: `0` on success, `1` on delivery/backend failure, `2` on usage errors.
 
 ### Sending images and other media
 
@@ -428,23 +428,23 @@ hermes send --to telegram "[[as_document]] MEDIA:/tmp/screenshot.png"
 Examples:
 
 ```bash
-hermes send --to telegram "deploy finished"
-echo "RAM 92%" | hermes send --to telegram:-1001234567890
-hermes send --to discord:#ops --file /tmp/report.md
-hermes send --to slack:#eng --subject "[CI]" --file build.log
-hermes send --list                  # all platforms
-hermes send --list telegram         # filter by platform
+pace send --to telegram "deploy finished"
+echo "RAM 92%" | pace send --to telegram:-1001234567890
+pace send --to discord:#ops --file /tmp/report.md
+pace send --to slack:#eng --subject "[CI]" --file build.log
+pace send --list                  # all platforms
+pace send --list telegram         # filter by platform
 ```
 
 
-## `hermes secrets`
+## `pace secrets`
 
 ```bash
-hermes secrets bitwarden <subcommand>
-hermes secrets bw <subcommand>          # short alias
+pace secrets bitwarden <subcommand>
+pace secrets bw <subcommand>          # short alias
 ```
 
-Pull API keys from an external secret manager at process startup instead of storing them in `~/.hermes/.env`. Currently supports **Bitwarden Secrets Manager**. See the full guide: [Bitwarden integration](../user-guide/secrets/bitwarden.md).
+Pull API keys from an external secret manager at process startup instead of storing them in `~/.pace/.env`. Currently supports **Bitwarden Secrets Manager**. See the full guide: [Bitwarden integration](../user-guide/secrets/bitwarden.md).
 
 `bitwarden` (alias `bw`) subcommands:
 
@@ -458,10 +458,10 @@ Pull API keys from an external secret manager at process startup instead of stor
 | `disable` | Turn off the Bitwarden integration. |
 
 
-## `hermes migrate`
+## `pace migrate`
 
 ```bash
-hermes migrate <type>
+pace migrate <type>
 ```
 
 Diagnose and (optionally) rewrite the active `config.yaml` to replace references to retired models or deprecated settings. A timestamped backup of the original `config.yaml` is taken before any rewrite (skip with `--no-backup`).
@@ -477,13 +477,13 @@ Common flags for migration subcommands:
 | `--apply` | Rewrite `config.yaml` in-place (default: dry-run, no writes). |
 | `--no-backup` | Skip the timestamped backup of `config.yaml` when applying. |
 
-> Not to be confused with `hermes claw migrate` (one-shot import of OpenClaw configuration into Hermes) — `hermes migrate` is the top-level config-rewrite command.
+> Not to be confused with `pace claw migrate` (one-shot import of OpenClaw configuration into Hermes) — `pace migrate` is the top-level config-rewrite command.
 
 
-## `hermes proxy`
+## `pace proxy`
 
 ```bash
-hermes proxy <subcommand>
+pace proxy <subcommand>
 ```
 
 Run a local OpenAI-compatible HTTP server that forwards requests to an OAuth-authenticated upstream provider (e.g. Nous Portal, xAI). External apps can point at the proxy with any bearer token; the proxy attaches your real OAuth credentials on the way out. See [Subscription Proxy](../user-guide/features/subscription-proxy.md) for the full guide.
@@ -495,13 +495,13 @@ Run a local OpenAI-compatible HTTP server that forwards requests to an OAuth-aut
 | `providers` | List available proxy upstream providers. |
 
 
-## `hermes security`
+## `pace security`
 
 ```bash
-hermes security <subcommand>
+pace security <subcommand>
 ```
 
-On-demand vulnerability scan against [OSV.dev](https://osv.dev). Covers the Hermes venv (installed PyPI distributions), Python dependencies declared by plugins under `~/.hermes/plugins/`, and pinned `npx`/`uvx` MCP servers in `config.yaml`. Does NOT scan globally-installed packages or editor/browser extensions.
+On-demand vulnerability scan against [OSV.dev](https://osv.dev). Covers the Hermes venv (installed PyPI distributions), Python dependencies declared by plugins under `~/.pace/plugins/`, and pinned `npx`/`uvx` MCP servers in `config.yaml`. Does NOT scan globally-installed packages or editor/browser extensions.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -518,35 +518,35 @@ On-demand vulnerability scan against [OSV.dev](https://osv.dev). Covers the Herm
 | `--skip-mcp` | off | Skip scanning pinned MCP servers in `config.yaml`. |
 
 
-## `hermes login` / `hermes logout` *(Deprecated)*
+## `pace login` / `pace logout` *(Deprecated)*
 
 :::caution
-`hermes login` has been removed. Use `hermes auth` to manage OAuth credentials, `hermes model` to select a provider, or `hermes setup` for full interactive setup.
+`pace login` has been removed. Use `pace auth` to manage OAuth credentials, `pace model` to select a provider, or `pace setup` for full interactive setup.
 :::
 
-## `hermes auth`
+## `pace auth`
 
 Manage credential pools for same-provider key rotation. See [Credential Pools](/user-guide/features/credential-pools) for full documentation.
 
 ```bash
-hermes auth                                              # Interactive wizard
-hermes auth list                                         # Show all pools
-hermes auth list openrouter                              # Show specific provider
-hermes auth add openrouter --api-key sk-or-v1-xxx        # Add API key
-hermes auth add anthropic --type oauth                   # Add OAuth credential
-hermes auth remove openrouter 2                          # Remove by index
-hermes auth reset openrouter                             # Clear cooldowns
-hermes auth status anthropic                             # Show auth status for a provider
-hermes auth logout anthropic                             # Log out and clear stored auth state
-hermes auth spotify                                      # Authenticate Hermes with Spotify via PKCE
+pace auth                                              # Interactive wizard
+pace auth list                                         # Show all pools
+pace auth list openrouter                              # Show specific provider
+pace auth add openrouter --api-key sk-or-v1-xxx        # Add API key
+pace auth add anthropic --type oauth                   # Add OAuth credential
+pace auth remove openrouter 2                          # Remove by index
+pace auth reset openrouter                             # Clear cooldowns
+pace auth status anthropic                             # Show auth status for a provider
+pace auth logout anthropic                             # Log out and clear stored auth state
+pace auth spotify                                      # Authenticate Hermes with Spotify via PKCE
 ```
 
 Subcommands: `add`, `list`, `remove`, `reset`, `status`, `logout`, `spotify`. When called with no subcommand, launches the interactive management wizard.
 
-## `hermes status`
+## `pace status`
 
 ```bash
-hermes status [--all] [--deep]
+pace status [--all] [--deep]
 ```
 
 | Option | Description |
@@ -554,10 +554,10 @@ hermes status [--all] [--deep]
 | `--all` | Show all details in a shareable redacted format. |
 | `--deep` | Run deeper checks that may take longer. |
 
-## `hermes cron`
+## `pace cron`
 
 ```bash
-hermes cron <list|create|edit|pause|resume|run|remove|status|tick>
+pace cron <list|create|edit|pause|resume|run|remove|status|tick>
 ```
 
 | Subcommand | Description |
@@ -584,25 +584,25 @@ the built-in, so cron is never left without a trigger. See the
 ## `hermes kanban`
 
 ```bash
-hermes kanban [--board <slug>] <action> [options]
+pace kanban [--board <slug>] <action> [options]
 ```
 
-Multi-profile, multi-project collaboration board. Each install can host many boards (one per project, repo, or domain); each board is a standalone queue with its own SQLite DB and dispatcher scope. New installs start with one board called `default`, whose DB is `~/.hermes/kanban.db` for back-compat; additional boards live at `~/.hermes/kanban/boards/<slug>/kanban.db`. The gateway-embedded dispatcher sweeps every board per tick.
+Multi-profile, multi-project collaboration board. Each install can host many boards (one per project, repo, or domain); each board is a standalone queue with its own SQLite DB and dispatcher scope. New installs start with one board called `default`, whose DB is `~/.pace/kanban.db` for back-compat; additional boards live at `~/.pace/kanban/boards/<slug>/kanban.db`. The gateway-embedded dispatcher sweeps every board per tick.
 
 **Global flags (apply to every action below):**
 
 | Flag | Purpose |
 |------|---------|
-| `--board <slug>` | Operate on a specific board. Defaults to the current board (set via `hermes kanban boards switch`, the `HERMES_KANBAN_BOARD` env var, or `default`). |
+| `--board <slug>` | Operate on a specific board. Defaults to the current board (set via `pace kanban boards switch`, the `HERMES_KANBAN_BOARD` env var, or `default`). |
 
-**This is the human / scripting surface.** Agent workers spawned by the dispatcher drive the board through a dedicated `kanban_*` [toolset](/user-guide/features/kanban#how-workers-interact-with-the-board) (`kanban_show`, `kanban_complete`, `kanban_block`, `kanban_create`, `kanban_link`, `kanban_comment`, `kanban_heartbeat`; orchestrator profiles also get `kanban_list` and `kanban_unblock`) instead of shelling to `hermes kanban`. Workers have `HERMES_KANBAN_BOARD` pinned in their env so they physically cannot see other boards.
+**This is the human / scripting surface.** Agent workers spawned by the dispatcher drive the board through a dedicated `kanban_*` [toolset](/user-guide/features/kanban#how-workers-interact-with-the-board) (`kanban_show`, `kanban_complete`, `kanban_block`, `kanban_create`, `kanban_link`, `kanban_comment`, `kanban_heartbeat`; orchestrator profiles also get `kanban_list` and `kanban_unblock`) instead of shelling to `pace kanban`. Workers have `HERMES_KANBAN_BOARD` pinned in their env so they physically cannot see other boards.
 
 | Action | Purpose |
 |--------|---------|
 | `init` | Create `kanban.db` if missing. Idempotent. |
 | `boards list` / `boards ls` | List all boards with task counts. `--json`, `--all` (include archived). |
 | `boards create <slug>` | Create a new board. Flags: `--name`, `--description`, `--icon`, `--color`, `--switch` (make active). Slug is kebab-case, auto-downcased. |
-| `boards switch <slug>` / `boards use` | Persist `<slug>` as the active board (writes `~/.hermes/kanban/current`). |
+| `boards switch <slug>` / `boards use` | Persist `<slug>` as the active board (writes `~/.pace/kanban/current`). |
 | `boards show` / `boards current` | Print the currently-active board's name, DB path, and task counts. |
 | `boards rename <slug> "<name>"` | Change a board's display name. Slug is immutable. |
 | `boards rm <slug>` | Archive (default) or hard-delete a board. `--delete` skips the archive step. Archived boards move to `boards/_archived/<slug>-<ts>/`. Refused for `default`. |
@@ -630,19 +630,19 @@ Examples:
 
 ```bash
 # Create a second board and put a task on it without switching away.
-hermes kanban boards create atm10-server --name "ATM10 Server" --icon 🎮
-hermes kanban --board atm10-server create "Restart server" --assignee ops
+pace kanban boards create atm10-server --name "ATM10 Server" --icon 🎮
+pace kanban --board atm10-server create "Restart server" --assignee ops
 
 # Switch the active board for subsequent calls.
-hermes kanban boards switch atm10-server
-hermes kanban list                  # shows atm10-server tasks
+pace kanban boards switch atm10-server
+pace kanban list                  # shows atm10-server tasks
 
 # Archive a board (recoverable) or hard-delete it.
-hermes kanban boards rm atm10-server
-hermes kanban boards rm atm10-server --delete
+pace kanban boards rm atm10-server
+pace kanban boards rm atm10-server --delete
 ```
 
-Board resolution order (highest precedence first): `--board <slug>` flag → `HERMES_KANBAN_BOARD` env var → `~/.hermes/kanban/current` file → `default`.
+Board resolution order (highest precedence first): `--board <slug>` flag → `HERMES_KANBAN_BOARD` env var → `~/.pace/kanban/current` file → `default`.
 
 All actions are also available as a slash command in the gateway (`/kanban …`), with the same argument surface — including `boards` subcommands and the `--board` flag.
 
@@ -734,7 +734,7 @@ Projects are human-named workspaces that can span multiple folders / repos. They
 ## `hermes webhook`
 
 ```bash
-hermes webhook <subscribe|list|remove|test>
+pace webhook <subscribe|list|remove|test>
 ```
 
 Manage dynamic webhook subscriptions for event-driven agent activation. Requires the webhook platform to be enabled in config — if not configured, prints setup instructions.
@@ -746,10 +746,10 @@ Manage dynamic webhook subscriptions for event-driven agent activation. Requires
 | `remove` / `rm` | Delete a dynamic subscription. Static routes from config.yaml are not affected. |
 | `test` | Send a test POST to verify a subscription is working. |
 
-### `hermes webhook subscribe`
+### `pace webhook subscribe`
 
 ```bash
-hermes webhook subscribe <name> [options]
+pace webhook subscribe <name> [options]
 ```
 
 | Option | Description |
@@ -764,22 +764,22 @@ hermes webhook subscribe <name> [options]
 | `--deliver-only` | Skip the agent — deliver the rendered `--prompt` as the literal message. Zero LLM cost, sub-second delivery. Requires `--deliver` to be a real target (not `log`). |
 | `--script` | Filter/transform script under `~/.hermes/scripts/`. The webhook payload is passed as JSON on stdin; JSON stdout replaces the payload, and empty stdout, `[SILENT]`, or a nonzero exit code ignores the webhook. See [Script Filters and Transforms](../user-guide/messaging/webhooks.md#script-filters-and-transforms). |
 
-Subscriptions persist to `~/.hermes/webhook_subscriptions.json` and are hot-reloaded by the webhook adapter without a gateway restart.
+Subscriptions persist to `~/.pace/webhook_subscriptions.json` and are hot-reloaded by the webhook adapter without a gateway restart.
 
-## `hermes doctor`
+## `pace doctor`
 
 ```bash
-hermes doctor [--fix]
+pace doctor [--fix]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `--fix` | Attempt automatic repairs where possible. |
 
-## `hermes dump`
+## `pace dump`
 
 ```bash
-hermes dump [--show-keys]
+pace dump [--show-keys]
 ```
 
 Outputs a compact, plain-text summary of your entire Hermes setup. Designed to be copy-pasted into Discord, GitHub issues, or Telegram when asking for support — no ANSI colors, no special formatting, just data.
@@ -806,13 +806,13 @@ Outputs a compact, plain-text summary of your entire Hermes setup. Designed to b
 ### Example output
 
 ```
---- hermes dump ---
+--- pace dump ---
 version:          0.8.0 (2026.4.8) [af4abd2f]
 os:               Linux 6.14.0-37-generic x86_64
 python:           3.11.14
 openai_sdk:       2.24.0
 profile:          default
-hermes_home:      ~/.hermes
+hermes_home:      ~/.pace
 model:            anthropic/claude-opus-4.6
 provider:         openrouter
 terminal:         local
@@ -849,13 +849,13 @@ config_overrides:
 - Quick sanity check when something isn't working
 
 :::tip
-`hermes dump` is specifically designed for sharing. For interactive diagnostics, use `hermes doctor`. For a visual overview, use `hermes status`.
+`pace dump` is specifically designed for sharing. For interactive diagnostics, use `pace doctor`. For a visual overview, use `pace status`.
 :::
 
-## `hermes debug`
+## `pace debug`
 
 ```bash
-hermes debug share [options]
+pace debug share [options]
 ```
 
 Upload a debug report (system info + recent logs) to a paste service and get a shareable URL. Useful for quick support requests — includes everything a helper needs to diagnose your issue.
@@ -882,13 +882,13 @@ hermes debug share --nous       # Upload a private diagnostics bundle for Nous s
 hermes debug share --local      # Print report to terminal (no upload)
 ```
 
-## `hermes backup`
+## `pace backup`
 
 ```bash
-hermes backup [options]
+pace backup [options]
 ```
 
-Create a zip archive of your Hermes configuration, skills, sessions, and data. The backup excludes the hermes-agent codebase itself.
+Create a zip archive of your Hermes configuration, skills, sessions, and data. The backup excludes the pace-agent codebase itself.
 
 | Option | Description |
 |--------|-------------|
@@ -902,28 +902,28 @@ The backup uses SQLite's `backup()` API for safe copying, so it works correctly 
 
 - `*.db-wal`, `*.db-shm`, `*.db-journal` — SQLite's WAL / shared-memory / journal sidecars. The `*.db` file already got a consistent snapshot via `sqlite3.backup()`; shipping the live sidecars alongside it would let a restore see a half-committed state.
 - `checkpoints/` — per-session trajectory caches. Hash-keyed and regenerated per session; wouldn't port cleanly to another install anyway.
-- The `hermes-agent` code itself (this is a user-data backup, not a repo snapshot).
+- The `pace-agent` code itself (this is a user-data backup, not a repo snapshot).
 
 ### Examples
 
 ```bash
-hermes backup                           # Full backup to ~/hermes-backup-*.zip
-hermes backup -o /tmp/hermes.zip        # Full backup to specific path
-hermes backup --quick                   # Quick state-only snapshot
-hermes backup --quick --label "pre-upgrade"  # Quick snapshot with label
+pace backup                           # Full backup to ~/hermes-backup-*.zip
+pace backup -o /tmp/pace.zip        # Full backup to specific path
+pace backup --quick                   # Quick state-only snapshot
+pace backup --quick --label "pre-upgrade"  # Quick snapshot with label
 ```
 
-## `hermes checkpoints`
+## `pace checkpoints`
 
 ```bash
-hermes checkpoints [COMMAND]
+pace checkpoints [COMMAND]
 ```
 
-Inspect and manage the shadow git store at `~/.hermes/checkpoints/` — the storage layer behind the in-session `/rollback` command. Safe to run any time; does not require the agent to be running.
+Inspect and manage the shadow git store at `~/.pace/checkpoints/` — the storage layer behind the in-session `/rollback` command. Safe to run any time; does not require the agent to be running.
 
 | Subcommand | Description |
 |------------|-------------|
-| `status` (default) | Show total size, project count, and per-project breakdown. Bare `hermes checkpoints` is equivalent. |
+| `status` (default) | Show total size, project count, and per-project breakdown. Bare `pace checkpoints` is equivalent. |
 | `list` | Alias for `status`. |
 | `prune` | Force a cleanup sweep — delete orphan and stale projects, GC the store, enforce the size cap. Ignores the 24h idempotency marker. |
 | `clear` | Delete the entire checkpoint base. Irreversible; asks for confirmation unless `-f`. |
@@ -942,19 +942,19 @@ Inspect and manage the shadow git store at `~/.hermes/checkpoints/` — the stor
 ### Examples
 
 ```bash
-hermes checkpoints                                  # status overview
-hermes checkpoints prune --retention-days 3         # aggressive cleanup
-hermes checkpoints prune --max-size-mb 200          # tighten size cap once
-hermes checkpoints clear-legacy -f                  # drop v1 archive dirs
-hermes checkpoints clear -f                         # wipe everything
+pace checkpoints                                  # status overview
+pace checkpoints prune --retention-days 3         # aggressive cleanup
+pace checkpoints prune --max-size-mb 200          # tighten size cap once
+pace checkpoints clear-legacy -f                  # drop v1 archive dirs
+pace checkpoints clear -f                         # wipe everything
 ```
 
 See [Checkpoints and `/rollback`](../user-guide/checkpoints-and-rollback.md) for the full architecture and the in-session commands.
 
-## `hermes import`
+## `pace import`
 
 ```bash
-hermes import <zipfile> [options]
+pace import <zipfile> [options]
 ```
 
 Restore a previously created Hermes backup into your Hermes home directory. All files in the archive overwrite existing files in your Hermes home; `--force` only skips the confirmation prompt that fires when the target already has a Hermes installation.
@@ -969,17 +969,17 @@ Stop the gateway before importing to avoid conflicts with running processes.
 
 ### Examples
 ```bash
-hermes import ~/hermes-backup-20260423.zip           # Prompts before overwriting existing config
-hermes import ~/hermes-backup-20260423.zip --force   # Overwrite without prompting
+pace import ~/hermes-backup-20260423.zip           # Prompts before overwriting existing config
+pace import ~/hermes-backup-20260423.zip --force   # Overwrite without prompting
 ```
 
-## `hermes logs`
+## `pace logs`
 
 ```bash
-hermes logs [log_name] [options]
+pace logs [log_name] [options]
 ```
 
-View, tail, and filter Hermes log files. All logs are stored in `~/.hermes/logs/` (or `<profile>/logs/` for non-default profiles).
+View, tail, and filter Hermes log files. All logs are stored in `~/.pace/logs/` (or `<profile>/logs/` for non-default profiles).
 
 ### Log files
 
@@ -1007,25 +1007,25 @@ View, tail, and filter Hermes log files. All logs are stored in `~/.hermes/logs/
 
 ```bash
 # View the last 50 lines of agent.log (default)
-hermes logs
+pace logs
 
 # Follow agent.log in real time
-hermes logs -f
+pace logs -f
 
 # View the last 100 lines of gateway.log
-hermes logs gateway -n 100
+pace logs gateway -n 100
 
 # Show only warnings and errors from the last hour
-hermes logs --level WARNING --since 1h
+pace logs --level WARNING --since 1h
 
 # Filter by a specific session
-hermes logs --session abc123
+pace logs --session abc123
 
 # Follow errors.log, starting from 30 minutes ago
-hermes logs errors --since 30m -f
+pace logs errors --since 30m -f
 
 # List all log files with their sizes
-hermes logs list
+pace logs list
 ```
 
 ### Filtering
@@ -1034,20 +1034,20 @@ Filters can be combined. When multiple filters are active, a log line must pass 
 
 ```bash
 # WARNING+ lines from the last 2 hours containing session "tg-12345"
-hermes logs --level WARNING --since 2h --session tg-12345
+pace logs --level WARNING --since 2h --session tg-12345
 ```
 
 Lines without a parseable timestamp are included when `--since` is active (they may be continuation lines from a multi-line log entry). Lines without a detectable level are included when `--level` is active.
 
 ### Log rotation
 
-Hermes uses Python's `RotatingFileHandler`. Old logs are rotated automatically — look for `agent.log.1`, `agent.log.2`, etc. The `hermes logs list` subcommand shows all log files including rotated ones.
+Hermes uses Python's `RotatingFileHandler`. Old logs are rotated automatically — look for `agent.log.1`, `agent.log.2`, etc. The `pace logs list` subcommand shows all log files including rotated ones.
 
 
-## `hermes prompt-size`
+## `pace prompt-size`
 
 ```bash
-hermes prompt-size [--platform <name>] [--json]
+pace prompt-size [--platform <name>] [--json]
 ```
 
 Reports the fixed prompt budget for a fresh session — what gets sent on every
@@ -1071,26 +1071,26 @@ Runs entirely offline — no API call, works with no credentials configured.
 
 ```bash
 # Human-readable breakdown for the CLI platform (default)
-hermes prompt-size
+pace prompt-size
 
 # Simulate a messaging platform's prompt (different platform hint)
-hermes prompt-size --platform telegram
+pace prompt-size --platform telegram
 
 # Machine-readable output for scripts
-hermes prompt-size --json
+pace prompt-size --json
 ```
 
 :::tip
 The skills index and tool schemas scale with how many skills and tools you have
-enabled. To shrink the prompt, disable unused toolsets (`hermes tools`) or
-uninstall skills you don't need (`hermes skills`). Context files (AGENTS.md,
+enabled. To shrink the prompt, disable unused toolsets (`pace tools`) or
+uninstall skills you don't need (`pace skills`). Context files (AGENTS.md,
 .cursorrules) in your current directory also count toward the total.
 :::
 
-## `hermes config`
+## `pace config`
 
 ```bash
-hermes config <subcommand>
+pace config <subcommand>
 ```
 
 Subcommands:
@@ -1107,10 +1107,10 @@ Subcommands:
 | `check` | Check for missing or stale config. |
 | `migrate` | Add newly introduced options interactively. |
 
-## `hermes pairing`
+## `pace pairing`
 
 ```bash
-hermes pairing <list|approve|revoke|clear-pending>
+pace pairing <list|approve|revoke|clear-pending>
 ```
 
 | Subcommand | Description |
@@ -1120,10 +1120,10 @@ hermes pairing <list|approve|revoke|clear-pending>
 | `revoke <platform> <user-id>` | Revoke a user's access. |
 | `clear-pending` | Clear pending pairing codes. |
 
-## `hermes skills`
+## `pace skills`
 
 ```bash
-hermes skills <subcommand>
+pace skills <subcommand>
 ```
 
 Subcommands:
@@ -1140,8 +1140,8 @@ Subcommands:
 | `audit` | Re-scan installed hub skills. |
 | `uninstall` | Remove a hub-installed skill. |
 | `reset` | Un-stick a bundled skill flagged as `user_modified` by clearing its manifest entry. With `--restore`, also replaces the user copy with the bundled version. |
-| `opt-out` | Stop bundled skills from being seeded into the active profile. Writes a `.no-bundled-skills` marker so the installer, `hermes update`, and any sync skip bundled-skill seeding. Safe by default — nothing on disk is touched. With `--remove`, also deletes already-present bundled skills that are **unmodified** (user-edited, hub-installed, and hand-written skills are never removed; previews and confirms first, `--yes` to skip). |
-| `opt-in` | Undo `opt-out` by removing the `.no-bundled-skills` marker so bundled skills are seeded again on the next `hermes update`. With `--sync`, re-seed immediately. |
+| `opt-out` | Stop bundled skills from being seeded into the active profile. Writes a `.no-bundled-skills` marker so the installer, `pace update`, and any sync skip bundled-skill seeding. Safe by default — nothing on disk is touched. With `--remove`, also deletes already-present bundled skills that are **unmodified** (user-edited, hub-installed, and hand-written skills are never removed; previews and confirms first, `--yes` to skip). |
+| `opt-in` | Undo `opt-out` by removing the `.no-bundled-skills` marker so bundled skills are seeded again on the next `pace update`. With `--sync`, re-seed immediately. |
 | `publish` | Publish a skill to a registry. |
 | `snapshot` | Export/import skill configurations. |
 | `tap` | Manage custom skill sources. |
@@ -1178,13 +1178,13 @@ Notes:
 - `--source browse-sh` searches [browse.sh](https://browse.sh)'s catalog of 200+ site-specific browser-automation skills. Identifiers look like `browse-sh/airbnb.com/search-listings-ddgioa`.
 - Passing an `http(s)://…/*.md` URL installs `SKILL.md` plus explicitly referenced files under `references/`, `templates/`, `scripts/`, `assets/`, and `examples/`. When frontmatter has no `name:` and the URL slug isn't a valid identifier, an interactive terminal prompts for a name; non-interactive surfaces (`/skills install` inside the TUI, gateway platforms) require `--name <x>` instead.
 
-## `hermes bundles`
+## `pace bundles`
 
 ```bash
-hermes bundles <subcommand>
+pace bundles <subcommand>
 ```
 
-Skill bundles group several skills under one `/<bundle-name>` slash command. Invoking the bundle loads every referenced skill into a single combined user message. Storage: `~/.hermes/skill-bundles/<slug>.yaml`. See [Skill Bundles](../user-guide/features/skills.md#skill-bundles) for the YAML schema and behavior.
+Skill bundles group several skills under one `/<bundle-name>` slash command. Invoking the bundle loads every referenced skill into a single combined user message. Storage: `~/.pace/skill-bundles/<slug>.yaml`. See [Skill Bundles](../user-guide/features/skills.md#skill-bundles) for the YAML schema and behavior.
 
 Subcommands:
 
@@ -1194,28 +1194,28 @@ Subcommands:
 | `show <name>` | Show one bundle's name, description, skills, and file path |
 | `create <name>` | Create a new bundle. Pass `--skill <id>` (repeat) or omit for interactive entry. `--description`, `--instruction`, `--force` available. |
 | `delete <name>` | Remove a bundle file |
-| `reload` | Re-scan `~/.hermes/skill-bundles/` and report added/removed bundles |
+| `reload` | Re-scan `~/.pace/skill-bundles/` and report added/removed bundles |
 
 Examples:
 
 ```bash
-hermes bundles create backend-dev \
+pace bundles create backend-dev \
   --skill github-code-review \
   --skill test-driven-development \
   --skill github-pr-workflow \
   -d "Backend feature work"
 
-hermes bundles list
-hermes bundles show backend-dev
-hermes bundles delete backend-dev
+pace bundles list
+pace bundles show backend-dev
+pace bundles delete backend-dev
 ```
 
 In a chat session, `/bundles` lists installed bundles and `/<bundle-name>` loads one.
 
-## `hermes curator`
+## `pace curator`
 
 ```bash
-hermes curator <subcommand>
+pace curator <subcommand>
 ```
 
 The curator is an auxiliary-model background task that periodically reviews agent-created skills, prunes stale ones, consolidates overlaps, and archives obsolete skills. Bundled and hub-installed skills are never touched. Archives are recoverable; auto-deletion never happens.
@@ -1226,8 +1226,8 @@ The curator is an auxiliary-model background task that periodically reviews agen
 | `run` | Trigger a curator review now (blocks until the LLM pass finishes) |
 | `run --background` | Start the LLM pass in a background thread and return immediately |
 | `run --dry-run` | Preview only — produce the review report with no mutations |
-| `backup` | Take a manual tar.gz snapshot of `~/.hermes/skills/` (curator also snapshots automatically before every real run) |
-| `rollback` | Restore `~/.hermes/skills/` from a snapshot (defaults to newest) |
+| `backup` | Take a manual tar.gz snapshot of `~/.pace/skills/` (curator also snapshots automatically before every real run) |
+| `rollback` | Restore `~/.pace/skills/` from a snapshot (defaults to newest) |
 | `rollback --list` | List available snapshots |
 | `rollback --id <ts>` | Restore a specific snapshot by id |
 | `rollback -y` | Skip the confirmation prompt |
@@ -1240,7 +1240,7 @@ The curator is an auxiliary-model background task that periodically reviews agen
 | `prune` | Manually prune skills the curator would normally clean up |
 | `list-archived` | List archived skills (recoverable via `restore`) |
 
-On a fresh install the first scheduled pass is deferred by one full `interval_hours` (7 days by default) — the gateway will not curate immediately on the first tick after `hermes update`. Use `hermes curator run --dry-run` to preview before that happens.
+On a fresh install the first scheduled pass is deferred by one full `interval_hours` (7 days by default) — the gateway will not curate immediately on the first tick after `pace update`. Use `pace curator run --dry-run` to preview before that happens.
 
 See [Curator](../user-guide/features/curator.md) for behavior and config.
 
@@ -1259,7 +1259,7 @@ hermes moa delete <name>
 ## `hermes fallback`
 
 ```bash
-hermes fallback <subcommand>
+pace fallback <subcommand>
 ```
 
 Manage the fallback provider chain. Fallback providers are tried in order when the primary model fails with rate-limit, overload, or connection errors.
@@ -1267,19 +1267,19 @@ Manage the fallback provider chain. Fallback providers are tried in order when t
 | Subcommand | Description |
 |------------|-------------|
 | `list` (alias: `ls`) | Show the current fallback chain (default when no subcommand) |
-| `add` | Pick a provider + model (same picker as `hermes model`) and append to the chain |
+| `add` | Pick a provider + model (same picker as `pace model`) and append to the chain |
 | `remove` (alias: `rm`) | Pick an entry to delete from the chain |
 | `clear` | Remove all fallback entries |
 
 See [Fallback Providers](../user-guide/features/fallback-providers.md).
 
-## `hermes hooks`
+## `pace hooks`
 
 ```bash
-hermes hooks <subcommand>
+pace hooks <subcommand>
 ```
 
-Inspect shell-script hooks declared in `~/.hermes/config.yaml`, test them against synthetic payloads, and manage the first-use consent allowlist at `~/.hermes/shell-hooks-allowlist.json`.
+Inspect shell-script hooks declared in `~/.pace/config.yaml`, test them against synthetic payloads, and manage the first-use consent allowlist at `~/.pace/shell-hooks-allowlist.json`.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -1290,10 +1290,10 @@ Inspect shell-script hooks declared in `~/.hermes/config.yaml`, test them agains
 
 See [Hooks](../user-guide/features/hooks.md) for event signatures and payload shapes.
 
-## `hermes memory`
+## `pace memory`
 
 ```bash
-hermes memory <subcommand>
+pace memory <subcommand>
 ```
 
 Set up and manage external memory provider plugins. Available providers: honcho, openviking, mem0, hindsight, holographic, retaindb, byterover, supermemory. Only one external provider can be active at a time. Built-in memory (MEMORY.md/USER.md) is always active.
@@ -1307,13 +1307,13 @@ Subcommands:
 | `off` | Disable external provider (built-in only). |
 
 :::info Provider-specific subcommands
-When an external memory provider is active, it may register its own top-level `hermes <provider>` command for provider-specific management (e.g. `hermes honcho` when Honcho is active). Inactive providers do not expose their subcommands. Run `hermes --help` to see what's currently wired in.
+When an external memory provider is active, it may register its own top-level `pace <provider>` command for provider-specific management (e.g. `pace honcho` when Honcho is active). Inactive providers do not expose their subcommands. Run `pace --help` to see what's currently wired in.
 :::
 
-## `hermes acp`
+## `pace acp`
 
 ```bash
-hermes acp
+pace acp
 ```
 
 Starts Hermes as an ACP (Agent Client Protocol) stdio server for editor integration.
@@ -1333,10 +1333,10 @@ cd ~/.hermes/hermes-agent && uv pip install -e '.[acp]'
 
 See [ACP Editor Integration](../user-guide/features/acp.md) and [ACP Internals](../developer-guide/acp-internals.md).
 
-## `hermes mcp`
+## `pace mcp`
 
 ```bash
-hermes mcp <subcommand>
+pace mcp <subcommand>
 ```
 
 Manage MCP (Model Context Protocol) server configurations and run Hermes as an MCP server.
@@ -1345,7 +1345,7 @@ Manage MCP (Model Context Protocol) server configurations and run Hermes as an M
 |------------|-------------|
 | *(none)* or `picker` | Interactive catalog picker — browse Nous-approved MCPs and install/enable/disable. |
 | `catalog` | List Nous-approved MCPs (plain text, scriptable). |
-| `install <name>` | Install a catalog entry (e.g. `hermes mcp install n8n`). |
+| `install <name>` | Install a catalog entry (e.g. `pace mcp install n8n`). |
 | `serve [-v\|--verbose]` | Run Hermes as an MCP server — expose conversations to other agents. |
 | `add <name> [--url URL] [--command CMD] [--auth oauth\|header] [--args ...]` | Add a custom MCP server with automatic tool discovery. `--args` passes the remaining argv to the stdio command, so put it last. |
 | `remove <name>` (alias: `rm`) | Remove an MCP server from config. |
@@ -1354,15 +1354,15 @@ Manage MCP (Model Context Protocol) server configurations and run Hermes as an M
 | `configure <name>` (alias: `config`) | Toggle tool selection for a server. |
 | `login <name>` | Force re-authentication for an OAuth-based MCP server. |
 
-See [MCP Config Reference](./mcp-config-reference.md), [Use MCP with Hermes](../guides/use-mcp-with-hermes.md), and [MCP Server Mode](../user-guide/features/mcp.md#running-hermes-as-an-mcp-server).
+See [MCP Config Reference](./mcp-config-reference.md), [Use MCP with Hermes](../guides/use-mcp-with-pace.md), and [MCP Server Mode](../user-guide/features/mcp.md#running-hermes-as-an-mcp-server).
 
-## `hermes plugins`
+## `pace plugins`
 
 ```bash
-hermes plugins [subcommand]
+pace plugins [subcommand]
 ```
 
-Unified plugin management — general plugins, memory providers, and context engines in one place. Running `hermes plugins` with no subcommand opens a composite interactive screen with two sections:
+Unified plugin management — general plugins, memory providers, and context engines in one place. Running `pace plugins` with no subcommand opens a composite interactive screen with two sections:
 
 - **General Plugins** — multi-select checkboxes to enable/disable installed plugins
 - **Provider Plugins** — single-select configuration for Memory Provider and Context Engine. Press ENTER on a category to open a radio picker.
@@ -1385,10 +1385,10 @@ General plugin disabled list is stored in `config.yaml` under `plugins.disabled`
 
 See [Plugins](../user-guide/features/plugins.md) and [Build a Hermes Plugin](../developer-guide/plugins/index.md).
 
-## `hermes tools`
+## `pace tools`
 
 ```bash
-hermes tools [--summary]
+pace tools [--summary]
 ```
 
 | Option | Description |
@@ -1397,10 +1397,10 @@ hermes tools [--summary]
 
 Without `--summary`, this launches the interactive per-platform tool configuration UI.
 
-## `hermes computer-use`
+## `pace computer-use`
 
 ```bash
-hermes computer-use <subcommand>
+pace computer-use <subcommand>
 ```
 
 Subcommands:
@@ -1411,14 +1411,14 @@ Subcommands:
 | `install --upgrade` | Re-run the installer even if cua-driver is already on PATH. The upstream script always pulls the latest release, so this performs an in-place upgrade. |
 | `status` | Print whether `cua-driver` is on `$PATH` and which version is installed. |
 
-`hermes computer-use install` is the stable entry point for installing the
+`pace computer-use install` is the stable entry point for installing the
 [cua-driver](https://github.com/trycua/cua) binary used by the
 `computer_use` toolset. It runs the same upstream installer that
-`hermes tools` invokes when you first enable Computer Use, so it's safe
+`pace tools` invokes when you first enable Computer Use, so it's safe
 to use for re-running the install if the toolset toggle didn't trigger
 it (for example, on returning-user setups).
 
-`hermes update` automatically re-runs the upstream installer at the end
+`pace update` automatically re-runs the upstream installer at the end
 of the update if cua-driver is on PATH, so most users will not need to
 call `--upgrade` manually. Use it when upstream ships a fix you want
 right now without waiting for the next Hermes update.
@@ -1447,7 +1447,7 @@ You can also generate a brand-new pet from a text description with the `/hatch` 
 ## `hermes sessions`
 
 ```bash
-hermes sessions <subcommand>
+pace sessions <subcommand>
 ```
 
 Subcommands:
@@ -1463,10 +1463,10 @@ Subcommands:
 | `stats` | Show session-store statistics. |
 | `rename <session-id> <title>` | Set or change a session title. |
 
-## `hermes insights`
+## `pace insights`
 
 ```bash
-hermes insights [--days N] [--source platform]
+pace insights [--days N] [--source platform]
 ```
 
 | Option | Description |
@@ -1474,13 +1474,13 @@ hermes insights [--days N] [--source platform]
 | `--days <n>` | Analyze the last `n` days (default: 30). |
 | `--source <platform>` | Filter by source such as `cli`, `telegram`, or `discord`. |
 
-## `hermes claw`
+## `pace claw`
 
 ```bash
-hermes claw migrate [options]
+pace claw migrate [options]
 ```
 
-Migrate your OpenClaw setup to Hermes. Reads from `~/.openclaw` (or a custom path) and writes to `~/.hermes`. Automatically detects legacy directory names (`~/.clawdbot`, `~/.moltbot`) and config filenames (`clawdbot.json`, `moltbot.json`).
+Migrate your OpenClaw setup to Hermes. Reads from `~/.openclaw` (or a custom path) and writes to `~/.pace`. Automatically detects legacy directory names (`~/.clawdbot`, `~/.moltbot`) and config filenames (`clawdbot.json`, `moltbot.json`).
 
 | Option | Description |
 |--------|-------------|
@@ -1488,7 +1488,7 @@ Migrate your OpenClaw setup to Hermes. Reads from `~/.openclaw` (or a custom pat
 | `--preset <name>` | Migration preset: `full` (all compatible settings) or `user-data` (excludes infrastructure config). Neither preset imports secrets — pass `--migrate-secrets` explicitly. |
 | `--overwrite` | Overwrite existing Hermes files on conflicts (default: refuse to apply when the plan has conflicts). |
 | `--migrate-secrets` | Include API keys in migration. Required even under `--preset full`. |
-| `--no-backup` | Skip the pre-migration zip snapshot of `~/.hermes/` (by default a single restore-point archive is written to `~/.hermes/backups/pre-migration-*.zip` before apply; restorable with `hermes import`). |
+| `--no-backup` | Skip the pre-migration zip snapshot of `~/.pace/` (by default a single restore-point archive is written to `~/.pace/backups/pre-migration-*.zip` before apply; restorable with `pace import`). |
 | `--source <path>` | Custom OpenClaw directory (default: `~/.openclaw`). |
 | `--workspace-target <path>` | Target directory for workspace instructions (AGENTS.md). |
 | `--skill-conflict <mode>` | Handle skill name collisions: `skip` (default), `overwrite`, or `rename`. |
@@ -1510,19 +1510,19 @@ For the complete config key mapping, SecretRef handling details, and post-migrat
 
 ```bash
 # Preview what would be migrated
-hermes claw migrate --dry-run
+pace claw migrate --dry-run
 
 # Full migration (all compatible settings, no secrets)
-hermes claw migrate --preset full
+pace claw migrate --preset full
 
 # Full migration including API keys
-hermes claw migrate --preset full --migrate-secrets
+pace claw migrate --preset full --migrate-secrets
 
 # Migrate user data only (no secrets), overwrite conflicts
-hermes claw migrate --preset user-data --overwrite
+pace claw migrate --preset user-data --overwrite
 
 # Migrate from a custom OpenClaw path
-hermes claw migrate --source /home/user/old-openclaw
+pace claw migrate --source /home/user/old-openclaw
 ```
 
 ## `hermes import-agent`
@@ -1554,7 +1554,7 @@ Start the Hermes **backend server** — the JSON-RPC/WebSocket gateway the [desk
 ## `hermes dashboard`
 
 ```bash
-hermes dashboard [options]
+pace dashboard [options]
 ```
 
 Launch the web dashboard — a browser-based UI for managing configuration, API keys, and monitoring sessions. (For a headless backend with no browser UI — e.g. what the desktop app spawns — use [`hermes serve`](#hermes-serve) above.) Requires `cd ~/.hermes/hermes-agent && uv pip install -e ".[web]"` (FastAPI + Uvicorn). The embedded browser Chat tab is always available and additionally needs the `pty` extra (`cd ~/.hermes/hermes-agent && uv pip install -e ".[web,pty]"`) plus a POSIX PTY environment such as Linux, macOS, or WSL2. See [Web Dashboard](/user-guide/features/web-dashboard) for full documentation.
@@ -1582,20 +1582,20 @@ Register this install as a self-hosted dashboard with your Nous Portal account. 
 
 ```bash
 # Default — opens browser to http://127.0.0.1:9119
-hermes dashboard
+pace dashboard
 
 # Custom port, no browser
-hermes dashboard --port 8080 --no-open
+pace dashboard --port 8080 --no-open
 
 # From a profile alias — routes to the machine dashboard with the
 # profile preselected in the sidebar switcher (attach if running)
 worker dashboard
 ```
 
-## `hermes profile`
+## `pace profile`
 
 ```bash
-hermes profile <subcommand>
+pace profile <subcommand>
 ```
 
 Manage profiles — multiple isolated Hermes instances, each with its own config, sessions, skills, and home directory.
@@ -1618,21 +1618,21 @@ Manage profiles — multiple isolated Hermes instances, each with its own config
 Examples:
 
 ```bash
-hermes profile list
-hermes profile create work --clone
-hermes profile use work
-hermes profile alias work --name h-work
-hermes profile export work -o work-backup.tar.gz
-hermes profile import work-backup.tar.gz --name restored
-hermes profile install github.com/user/my-distro --alias
-hermes profile update work
-hermes -p work chat -q "Hello from work profile"
+pace profile list
+pace profile create work --clone
+pace profile use work
+pace profile alias work --name h-work
+pace profile export work -o work-backup.tar.gz
+pace profile import work-backup.tar.gz --name restored
+pace profile install github.com/user/my-distro --alias
+pace profile update work
+pace -p work chat -q "Hello from work profile"
 ```
 
-## `hermes completion`
+## `pace completion`
 
 ```bash
-hermes completion [bash|zsh|fish]
+pace completion [bash|zsh|fish]
 ```
 
 Print a shell completion script to stdout. Source the output in your shell profile for tab-completion of Hermes commands, subcommands, and profile names.
@@ -1641,19 +1641,19 @@ Examples:
 
 ```bash
 # Bash
-hermes completion bash >> ~/.bashrc
+pace completion bash >> ~/.bashrc
 
 # Zsh
-hermes completion zsh >> ~/.zshrc
+pace completion zsh >> ~/.zshrc
 
 # Fish
-hermes completion fish > ~/.config/fish/completions/hermes.fish
+pace completion fish > ~/.config/fish/completions/pace.fish
 ```
 
-## `hermes update`
+## `pace update`
 
 ```bash
-hermes update [--gateway] [--check] [--no-backup] [--backup] [--yes]
+pace update [--gateway] [--check] [--no-backup] [--backup] [--yes]
 ```
 
 Pulls the latest `hermes-agent` code and reinstalls dependencies in the managed venv, then re-runs the post-install hooks (MCP servers, skills sync, completion install). Safe to run on a live install. Use `--check` to see whether your checkout is behind `origin/main` without installing.

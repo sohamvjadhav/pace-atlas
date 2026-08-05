@@ -12,7 +12,7 @@ Hermes Agent includes two model-callable web tools backed by multiple providers:
 - **`web_search`** — search the web and return ranked results
 - **`web_extract`** — fetch and extract readable content from one or more URLs
 
-Both are configured through a single backend selection. Providers are chosen via `hermes tools` or set directly in `config.yaml`.
+Both are configured through a single backend selection. Providers are chosen via `pace tools` or set directly in `config.yaml`.
 
 ## Backends
 
@@ -32,7 +32,7 @@ Brave Search, DDGS, and xAI are **search-only** — pair any of them with Firecr
 **Per-capability split:** you can use different providers for search and extract independently — for example SearXNG (free) for search and Firecrawl for extract. See [Per-capability configuration](#per-capability-configuration) below.
 
 :::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, web search and extract are available through the **[Tool Gateway](tool-gateway.md)** via managed Firecrawl — no API key needed. New installs can run `hermes setup --portal` to log in and turn on all gateway tools at once; existing installs can flip just web via `hermes tools`.
+If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, web search and extract are available through the **[Tool Gateway](tool-gateway.md)** via managed Firecrawl — no API key needed. New installs can run `pace setup --portal` to log in and turn on all gateway tools at once; existing installs can flip just web via `pace tools`.
 :::
 
 ---
@@ -57,12 +57,12 @@ If you specifically need the live DOM rather than extracted markdown — for exa
 
 ## Setup
 
-### Quick setup via `hermes tools`
+### Quick setup via `pace tools`
 
-Run `hermes tools`, navigate to **Web Search & Extract**, and pick a provider. The wizard prompts for the required URL or API key and writes it to your config.
+Run `pace tools`, navigate to **Web Search & Extract**, and pick a provider. The wizard prompts for the required URL or API key and writes it to your config.
 
 ```bash
-hermes tools
+pace tools
 ```
 
 ---
@@ -72,7 +72,7 @@ hermes tools
 Full-featured search and extract. Recommended for most users.
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 FIRECRAWL_API_KEY=fc-your-key-here
 ```
 
@@ -81,7 +81,7 @@ Get a key at [firecrawl.dev](https://firecrawl.dev). The free tier includes 500 
 **Self-hosted Firecrawl:** Point at your own instance instead of the cloud API:
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 FIRECRAWL_API_URL=http://localhost:3002
 ```
 
@@ -186,18 +186,18 @@ You should see something like `10 results`. If you get a `403 Forbidden`, JSON f
 **7. Configure Hermes:**
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 SEARXNG_URL=http://localhost:8888
 ```
 
-Then select SearXNG as the search backend in `~/.hermes/config.yaml`:
+Then select SearXNG as the search backend in `~/.pace/config.yaml`:
 
 ```yaml
 web:
   search_backend: "searxng"
 ```
 
-Or set via `hermes tools` → Web Search & Extract → SearXNG.
+Or set via `pace tools` → Web Search & Extract → SearXNG.
 
 ---
 
@@ -206,7 +206,7 @@ Or set via `hermes tools` → Web Search & Extract → SearXNG.
 Public SearXNG instances are listed at [searx.space](https://searx.space/). Filter by instances that have **JSON format enabled** (shown in the table).
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 SEARXNG_URL=https://searx.example.com
 ```
 
@@ -221,7 +221,7 @@ Public instances have rate limits, variable uptime, and may disable JSON format 
 SearXNG handles search; you need a separate provider for `web_extract`. Use the per-capability keys:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 web:
   search_backend: "searxng"
   extract_backend: "firecrawl"   # or tavily, exa, parallel
@@ -236,7 +236,7 @@ With this config, Hermes uses SearXNG for all search queries and Firecrawl for U
 AI-optimised search and extract with a generous free tier.
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 TAVILY_API_KEY=tvly-your-key-here
 ```
 
@@ -249,7 +249,7 @@ Get a key at [app.tavily.com](https://app.tavily.com/home). The free tier includ
 Neural search with semantic understanding. Good for research and finding conceptually related content.
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 EXA_API_KEY=your-exa-key-here
 ```
 
@@ -262,7 +262,7 @@ Get a key at [exa.ai](https://exa.ai). The free tier includes 1 000 searches/mon
 AI-native search and extraction with deep research capabilities.
 
 ```bash
-# ~/.hermes/.env
+# ~/.pace/.env
 PARALLEL_API_KEY=your-parallel-key-here
 ```
 
@@ -277,7 +277,7 @@ Routes `web_search` through Grok's server-side [web_search tool](https://docs.x.
 Works with either credential path — no new env vars, no new setup wizard:
 
 ```bash
-# ~/.hermes/.env (env-var path)
+# ~/.pace/.env (env-var path)
 XAI_API_KEY=sk-xai-your-key-here
 ```
 
@@ -290,7 +290,7 @@ hermes auth add xai-oauth
 Then select xAI as the search backend:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 web:
   backend: "xai"
 ```
@@ -324,7 +324,7 @@ Unlike index-backed providers (Brave, Tavily, Exa) which return verbatim search-
 Set one provider for all web capabilities:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 web:
   backend: "searxng"   # firecrawl | searxng | brave-free | ddgs | tavily | exa | parallel | xai
 ```
@@ -334,7 +334,7 @@ web:
 Use different providers for search vs extract. This lets you combine free search (SearXNG) with a paid extract provider, or vice versa:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 web:
   search_backend: "searxng"     # used by web_search
   extract_backend: "firecrawl"  # used by web_extract
@@ -367,7 +367,7 @@ xAI Web Search is **not** in the auto-detection chain — having `XAI_API_KEY` s
 
 ## Verify your setup
 
-Run `hermes setup` to see which web backend is detected:
+Run `pace setup` to see which web backend is detected:
 
 ```
 ✅ Web Search & Extract (searxng)
@@ -377,7 +377,7 @@ Or check via the CLI:
 
 ```bash
 # Activate the venv and run the web tools module directly
-source ~/.hermes/hermes-agent/.venv/bin/activate
+source ~/.pace/pace-agent/.venv/bin/activate
 python -m tools.web_tools
 ```
 
@@ -430,7 +430,7 @@ That's expected for pages over the character budget. The footer names the on-dis
 For agents that need to use SearXNG via `curl` directly (e.g. as a fallback when the web toolset isn't available), install the `searxng-search` optional skill:
 
 ```bash
-hermes skills install official/research/searxng-search
+pace skills install official/research/searxng-search
 ```
 
 This adds a skill that teaches the agent how to:

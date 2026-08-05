@@ -14,14 +14,14 @@ Configure and troubleshoot Honcho memory for Hermes.
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/autonomous-ai-agents/honcho` |
+| Source | Optional — install with `pace skills install official/autonomous-ai-agents/honcho` |
 | Path | `optional-skills/autonomous-ai-agents/honcho` |
 | Version | `2.0.0` |
 | Author | Hermes Agent |
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `Honcho`, `Memory`, `Profiles`, `Observation`, `Dialectic`, `User-Modeling`, `Session-Summary` |
-| Related skills | [`hermes-agent`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-hermes-agent) |
+| Related skills | [`pace-agent`](/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-pace-agent) |
 
 ## Reference: full SKILL.md
 
@@ -58,12 +58,12 @@ hermes memory setup honcho
 # select "local", enter base URL (e.g. http://localhost:8000)
 ```
 
-See: https://docs.honcho.dev/v3/guides/integrations/hermes#running-honcho-locally-with-hermes
+See: https://docs.honcho.dev/v3/guides/integrations/pace#running-honcho-locally-with-pace
 
 ### Verify
 
 ```bash
-hermes honcho status    # shows resolved config, connection test, peer info
+pace honcho status    # shows resolved config, connection test, peer info
 ```
 
 ## Architecture
@@ -138,7 +138,7 @@ Honcho sessions scope where messages and observations land. Strategy options:
 | `per-session` | New Honcho session each Hermes run |
 | `global` | Single session across all directories |
 
-Manual override: `hermes honcho map my-project-name`
+Manual override: `pace honcho map my-project-name`
 
 ### Recall Modes
 
@@ -220,12 +220,12 @@ Each Hermes profile gets its own Honcho AI peer while sharing the same workspace
 ### Create a profile with Honcho peer
 
 ```bash
-hermes profile create coder --clone
-# creates host block hermes.coder, AI peer "coder", inherits config from default
+pace profile create coder --clone
+# creates host block pace.coder, AI peer "coder", inherits config from default
 ```
 
 What `--clone` does for Honcho:
-1. Creates a `hermes.coder` host block in `honcho.json`
+1. Creates a `pace.coder` host block in `honcho.json`
 2. Sets `aiPeer: "coder"` (the profile name)
 3. Inherits `workspace`, `peerName`, `writeFrequency`, `recallMode`, etc. from default
 4. Eagerly creates the peer in Honcho so it exists before first message
@@ -233,7 +233,7 @@ What `--clone` does for Honcho:
 ### Backfill existing profiles
 
 ```bash
-hermes honcho sync    # creates host blocks for all profiles that don't have one yet
+pace honcho sync    # creates host blocks for all profiles that don't have one yet
 ```
 
 ### Per-profile config
@@ -243,7 +243,7 @@ Override any setting in the host block:
 ```json
 {
   "hosts": {
-    "hermes.coder": {
+    "pace.coder": {
       "aiPeer": "coder",
       "recallMode": "tools",
       "dialecticDepth": 2,
@@ -404,13 +404,13 @@ This fix addresses edge cases where raw user conclusions containing markup or sp
 ## Troubleshooting
 
 ### "Honcho not configured"
-Run `hermes honcho setup`. Ensure `memory.provider: honcho` is in `~/.hermes/config.yaml`.
+Run `pace honcho setup`. Ensure `memory.provider: honcho` is in `~/.pace/config.yaml`.
 
 ### Memory not persisting across sessions
-Check `hermes honcho status` -- verify `saveMessages: true` and `writeFrequency` isn't `session` (which only writes on exit).
+Check `pace honcho status` -- verify `saveMessages: true` and `writeFrequency` isn't `session` (which only writes on exit).
 
 ### Profile not getting its own peer
-Use `--clone` when creating: `hermes profile create <name> --clone`. For existing profiles: `hermes honcho sync`.
+Use `--clone` when creating: `pace profile create <name> --clone`. For existing profiles: `pace honcho sync`.
 
 ### Observation changes in dashboard not reflected
 Observation config is synced from the server on each session init. Start a new session after changing settings in the Honcho UI.
@@ -428,19 +428,19 @@ Session summary requires at least one prior turn in the current Honcho session. 
 
 | Command | Description |
 |---------|-------------|
-| `hermes honcho setup` | Interactive setup wizard (cloud/local, identity, observation, recall, sessions) |
-| `hermes honcho status` | Show resolved config, connection test, peer info for active profile |
-| `hermes honcho enable` | Enable Honcho for the active profile (creates host block if needed) |
-| `hermes honcho disable` | Disable Honcho for the active profile |
-| `hermes honcho peer` | Show or update peer names (`--user <name>`, `--ai <name>`, `--reasoning <level>`) |
-| `hermes honcho peers` | Show peer identities across all profiles |
-| `hermes honcho mode` | Show or set recall mode (`hybrid`, `context`, `tools`) |
-| `hermes honcho tokens` | Show or set token budgets (`--context <N>`, `--dialectic <N>`) |
-| `hermes honcho sessions` | List known directory-to-session-name mappings |
-| `hermes honcho map <name>` | Map current working directory to a Honcho session name |
-| `hermes honcho identity` | Seed AI peer identity or show both peer representations |
-| `hermes honcho sync` | Create host blocks for all Hermes profiles that don't have one yet |
-| `hermes honcho migrate` | Step-by-step migration guide from OpenClaw native memory to Hermes + Honcho |
-| `hermes memory setup` | Generic memory provider picker (selecting "honcho" runs the same wizard) |
-| `hermes memory status` | Show active memory provider and config |
-| `hermes memory off` | Disable external memory provider |
+| `pace honcho setup` | Interactive setup wizard (cloud/local, identity, observation, recall, sessions) |
+| `pace honcho status` | Show resolved config, connection test, peer info for active profile |
+| `pace honcho enable` | Enable Honcho for the active profile (creates host block if needed) |
+| `pace honcho disable` | Disable Honcho for the active profile |
+| `pace honcho peer` | Show or update peer names (`--user <name>`, `--ai <name>`, `--reasoning <level>`) |
+| `pace honcho peers` | Show peer identities across all profiles |
+| `pace honcho mode` | Show or set recall mode (`hybrid`, `context`, `tools`) |
+| `pace honcho tokens` | Show or set token budgets (`--context <N>`, `--dialectic <N>`) |
+| `pace honcho sessions` | List known directory-to-session-name mappings |
+| `pace honcho map <name>` | Map current working directory to a Honcho session name |
+| `pace honcho identity` | Seed AI peer identity or show both peer representations |
+| `pace honcho sync` | Create host blocks for all Hermes profiles that don't have one yet |
+| `pace honcho migrate` | Step-by-step migration guide from OpenClaw native memory to Hermes + Honcho |
+| `pace memory setup` | Generic memory provider picker (selecting "honcho" runs the same wizard) |
+| `pace memory status` | Show active memory provider and config |
+| `pace memory off` | Disable external memory provider |

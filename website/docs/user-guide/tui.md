@@ -14,26 +14,26 @@ It's the recommended way to run Hermes interactively.
 
 ```bash
 # Launch the TUI
-hermes --tui
+pace --tui
 
 # Resume the latest TUI session (falls back to the latest classic session)
-hermes --tui -c
-hermes --tui --continue
+pace --tui -c
+pace --tui --continue
 
 # Resume a specific session by ID or title
-hermes --tui -r 20260409_000000_aa11bb
-hermes --tui --resume "my t0p session"
+pace --tui -r 20260409_000000_aa11bb
+pace --tui --resume "my t0p session"
 
 # Run source directly — skips the prebuild step (for TUI contributors)
-hermes --tui --dev
+pace --tui --dev
 ```
 
 You can also enable it via env var:
 
 ```bash
 export HERMES_TUI=1
-hermes          # now uses the TUI
-hermes chat     # same
+pace          # now uses the TUI
+pace chat     # same
 ```
 
 Or make it the persistent default in `~/.hermes/config.yaml`:
@@ -74,7 +74,7 @@ Click anywhere on a section header (or its chevron) to toggle it. The Tools list
 
 ## Requirements
 
-- **Node.js** ≥ 20 — the TUI runs as a subprocess launched from the Python CLI. `hermes doctor` verifies this.
+- **Node.js** ≥ 20 — the TUI runs as a subprocess launched from the Python CLI. `pace doctor` verifies this.
 - **TTY** — like the classic CLI, piping stdin or running in non-interactive environments falls back to single-query mode.
 
 On first launch Hermes installs the TUI's Node dependencies into `ui-tui/node_modules` (one-time, a few seconds). Subsequent launches are fast. If you pull a new Hermes version, the TUI bundle is rebuilt automatically when sources are newer than the dist.
@@ -89,7 +89,7 @@ Distributions that ship a prebuilt bundle (Nix, system packages) can point Herme
 
 ```bash
 export HERMES_TUI_DIR=/path/to/prebuilt/ui-tui
-hermes --tui
+pace --tui
 ```
 
 The directory must contain `dist/entry.js`.
@@ -118,14 +118,14 @@ All slash commands work unchanged. A few are TUI-owned — they produce richer o
 | `/details` | Toggle verbose tool-call details (global or per-section) |
 | `/usage` | Rich token / cost / context panel |
 | `/agents` (alias `/tasks`) | Observability overlay — live subagent tree with kill/pause controls, per-branch cost / token / file rollups, turn-by-turn history |
-| `/reload` | Re-reads `~/.hermes/.env` into the running TUI process so newly added API keys take effect without a restart |
+| `/reload` | Re-reads `~/.pace/.env` into the running TUI process so newly added API keys take effect without a restart |
 | `/mouse [on\|off\|toggle\|wheel\|buttons\|all]` | Pick a mouse tracking preset at runtime (also persists to `display.mouse_tracking` in `config.yaml`). `wheel` (1000+1006) keeps scroll-wheel scrolling without the hover events that make tmux spam "No image in clipboard" over the prompt row; `buttons` adds drag-to-select; `all` is the default with hover-driven UI. |
 
 Every other slash command (including installed skills, quick commands, and personality toggles) works identically to the classic CLI. See [Slash Commands Reference](../reference/slash-commands.md).
 
 ## Live session switcher
 
-Use the live session switcher when you want one terminal to act as a dispatcher for several TUI sessions. It lists only sessions that are currently live in this TUI process; closed sessions remain saved transcripts and can still be reopened with `/resume` or `hermes --tui --resume <id-or-title>`.
+Use the live session switcher when you want one terminal to act as a dispatcher for several TUI sessions. It lists only sessions that are currently live in this TUI process; closed sessions remain saved transcripts and can still be reopened with `/resume` or `pace --tui --resume <id-or-title>`.
 
 Open it with any of these:
 
@@ -181,7 +181,7 @@ Or in-session: `/indicator emoji` (etc.). Styles ship with matched glyph widths 
 
 ## Auto-resume
 
-By default, `hermes --tui` starts a fresh session each launch. To re-attach to the most recent TUI session automatically (useful when your terminal or SSH connection drops unexpectedly), opt in:
+By default, `pace --tui` starts a fresh session each launch. To re-attach to the most recent TUI session automatically (useful when your terminal or SSH connection drops unexpectedly), opt in:
 
 ```bash
 export HERMES_TUI_RESUME=1          # most-recent TUI session
@@ -207,15 +207,15 @@ The per-skin status-bar colors and thresholds are shared with the classic CLI �
 
 The status line also shows:
 
-- **Working directory with git branch** — `~/projects/hermes-agent (docs/two-week-gap-sweep)`. The branch suffix updates when you `git checkout` in a side terminal (mtime-cached) so the TUI reflects your actual active branch, not whatever it was at launch.
+- **Working directory with git branch** — `~/projects/pace-agent (docs/two-week-gap-sweep)`. The branch suffix updates when you `git checkout` in a side terminal (mtime-cached) so the TUI reflects your actual active branch, not whatever it was at launch.
 - **Per-prompt elapsed time** — `⏱ 12s/3m 45s` while the turn is running (live), frozen to `⏲ 32s / 3m 45s` after the turn completes. First number is time since last user message; second is total session duration. Resets on every new prompt.
 - **`🗜️ N`** — number of times the running session has been auto-compressed. Appears once the first compression fires.
 - **`▶ N`** — number of `/background` tasks currently running in this session. Appears whenever at least one task is in flight.
-- **`⚠ YOLO`** — visible warning whenever YOLO mode is on (`hermes --yolo`, `/yolo`, or `HERMES_YOLO_MODE=1`). The same badge also appears in the startup banner so you cannot launch an auto-approving session without noticing.
+- **`⚠ YOLO`** — visible warning whenever YOLO mode is on (`pace --yolo`, `/yolo`, or `HERMES_YOLO_MODE=1`). The same badge also appears in the startup banner so you cannot launch an auto-approving session without noticing.
 
 ## Configuration
 
-The TUI respects all standard Hermes config: `~/.hermes/config.yaml`, profiles, personalities, skins, quick commands, credential pools, memory providers, tool/skill enablement. No TUI-specific config file exists.
+The TUI respects all standard Hermes config: `~/.pace/config.yaml`, profiles, personalities, skins, quick commands, credential pools, memory providers, tool/skill enablement. No TUI-specific config file exists.
 
 A handful of keys tune the TUI surface specifically:
 
@@ -271,7 +271,7 @@ existing configs keep working unchanged.
 
 ## Sessions
 
-Sessions are shared between the TUI and the classic CLI — both write to the same `~/.hermes/state.db`. You can start a session in one, resume in the other. The session picker surfaces sessions from both sources, with a source tag.
+Sessions are shared between the TUI and the classic CLI — both write to the same `~/.pace/state.db`. You can start a session in one, resume in the other. The session picker surfaces sessions from both sources, with a source tag.
 
 See [Sessions](sessions.md) for lifecycle, search, compression, and export.
 

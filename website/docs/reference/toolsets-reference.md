@@ -21,9 +21,9 @@ Every tool belongs to exactly one toolset. When you enable a toolset, all tools 
 ### Per-session (CLI)
 
 ```bash
-hermes chat --toolsets web,file,terminal
-hermes chat --toolsets debugging        # composite — expands to file + terminal + web
-hermes chat --toolsets all              # everything
+pace chat --toolsets web,file,terminal
+pace chat --toolsets debugging        # composite — expands to file + terminal + web
+pace chat --toolsets all              # everything
 ```
 
 ### Per-platform (config.yaml)
@@ -37,7 +37,7 @@ toolsets:
 ### Interactive management
 
 ```bash
-hermes tools                            # curses UI to enable/disable per platform
+pace tools                            # curses UI to enable/disable per platform
 ```
 
 Or in-session:
@@ -162,8 +162,8 @@ A handful of tools have an additional availability check on top of toolset membe
 - **Capability-gated** tools (browser, `computer_use`, `code_execution`, Feishu, Home Assistant, cronjob) appear only when their backend/credential prerequisite is configured.
 - **Workflow-gated** tools — the `kanban` toolset — are deliberately opt-in. `all`/`*` does **not** enable kanban; you must list `kanban` explicitly (or be a dispatcher-spawned worker with `HERMES_KANBAN_TASK` set). Kanban tools mutate shared board state, so they stay off by default even under `all`.
 
-## Relationship to `hermes tools`
+## Relationship to `pace tools`
 
-The `hermes tools` command provides a curses-based UI for toggling individual tools on or off per platform. This operates at the tool level (finer than toolsets) and persists to `config.yaml`. Disabled tools are filtered out even if their toolset is enabled.
+The `pace tools` command provides a curses-based UI for toggling individual tools on or off per platform. This operates at the tool level (finer than toolsets) and persists to `config.yaml`. Disabled tools are filtered out even if their toolset is enabled.
 
 See also: [Tools Reference](./tools-reference.md) for the complete list of individual tools and their parameters.

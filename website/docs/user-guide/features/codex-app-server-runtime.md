@@ -10,7 +10,7 @@ Hermes can optionally hand `openai/*` and `openai-codex/*` turns to the [Codex C
 This is **opt-in only**. Default Hermes behavior is unchanged unless you flip the flag. Hermes never auto-routes you onto this runtime.
 
 :::tip
-Not using OpenAI Codex? `hermes setup --portal` configures a non-Codex backend with Claude/Gemini/etc. in one step. See [Nous Portal](/integrations/nous-portal).
+Not using OpenAI Codex? `pace setup --portal` configures a non-Codex backend with Claude/Gemini/etc. in one step. See [Nous Portal](/integrations/nous-portal).
 :::
 
 ## Why
@@ -87,7 +87,7 @@ These four Hermes tools require the running AIAgent context (mid-loop state) to 
 
 ### Kanban (multi-agent worktree dispatch)
 
-**Works on this runtime, with one subtle dependency.** The kanban dispatcher spawns each worker as a separate `hermes chat -q` subprocess that reads the user's config — which means if `model.openai_runtime: codex_app_server` is set globally, workers also come up on the codex runtime.
+**Works on this runtime, with one subtle dependency.** The kanban dispatcher spawns each worker as a separate `pace chat -q` subprocess that reads the user's config — which means if `model.openai_runtime: codex_app_server` is set globally, workers also come up on the codex runtime.
 
 What works inside a codex-runtime worker:
 - Codex's full toolset (shell, apply_patch, update_plan, view_image, web_search) — the worker does its actual task work natively
@@ -99,7 +99,7 @@ What also works because the MCP callback exposes them:
 - **`kanban_show` / `kanban_list`** — read-only board queries for the worker to check its own context.
 - **`kanban_create` / `kanban_unblock` / `kanban_link`** — orchestrator-only operations. Available for orchestrator agents running on the codex runtime that need to dispatch new tasks.
 
-The kanban tools are gated by `HERMES_KANBAN_TASK` env var the dispatcher sets — that var is propagated to the codex subprocess (codex inherits env) and from there to the spawned `hermes-tools` MCP server subprocess. So the tools see the right task id and gate correctly. For Codex app-server workers, Hermes also passes narrow app-server sandbox overrides when `HERMES_KANBAN_TASK` is present: keep `workspace-write` sandboxing, add the **board DB directory plus every Kanban path the dispatcher pinned** as extra writable roots (`HERMES_KANBAN_WORKSPACES_ROOT`, `HERMES_KANBAN_WORKSPACE`, legacy `HERMES_KANBAN_ROOT` — deduplicated, DB-dir first), and keep network disabled by default. This avoids the brittle `:danger-no-sandbox` workaround while letting `kanban_complete` / `kanban_block` update the board DB **and** letting workers write reports/artifacts under workspace mounts that live outside the DB directory (e.g. `/media/.../kanban-workspaces/...` on a separate drive — [issue #27941](https://github.com/NousResearch/hermes-agent/issues/27941)).
+The kanban tools are gated by `HERMES_KANBAN_TASK` env var the dispatcher sets — that var is propagated to the codex subprocess (codex inherits env) and from there to the spawned `hermes-tools` MCP server subprocess. So the tools see the right task id and gate correctly. For Codex app-server workers, Hermes also passes narrow app-server sandbox overrides when `HERMES_KANBAN_TASK` is present: keep `workspace-write` sandboxing, add the **board DB directory plus every Kanban path the dispatcher pinned** as extra writable roots (`HERMES_KANBAN_WORKSPACES_ROOT`, `HERMES_KANBAN_WORKSPACE`, legacy `HERMES_KANBAN_ROOT` — deduplicated, DB-dir first), and keep network disabled by default. This avoids the brittle `:danger-no-sandbox` workaround while letting `kanban_complete` / `kanban_block` update the board DB **and** letting workers write reports/artifacts under workspace mounts that live outside the DB directory (e.g. `/media/.../kanban-workspaces/...` on a separate drive — [issue #27941](https://github.com/NousResearch/pace-agent/issues/27941)).
 
 ### Cron jobs
 
@@ -178,7 +178,7 @@ In a Hermes session:
 That command:
 - Verifies the `codex` CLI is installed (blocks with an install hint if not).
 - Persists `model.openai_runtime: codex_app_server` to your config.yaml.
-- Migrates user MCP servers from `~/.hermes/config.yaml` to `~/.codex/config.toml`.
+- Migrates user MCP servers from `~/.pace/config.yaml` to `~/.codex/config.toml`.
 - **Discovers and migrates installed native Codex plugins** (Linear, GitHub, Gmail, Calendar, Canva, etc.) by querying Codex's `plugin/list` RPC.
 - **Registers Hermes' own tools as an MCP server** so the codex subprocess can call back for tools codex doesn't ship with.
 - **Writes `default_permissions = ":workspace"`** so the sandbox allows writes within the workspace without prompting for every operation.
@@ -191,7 +191,7 @@ To check current state without changing anything:
 /codex-runtime
 ```
 
-You can also set it manually in `~/.hermes/config.yaml`:
+You can also set it manually in `~/.pace/config.yaml`:
 ```yaml
 model:
   openai_runtime: codex_app_server   # default is "auto" (= Hermes runtime)
@@ -257,7 +257,7 @@ You can override the default in `~/.codex/config.toml` outside Hermes' managed b
 default_permissions = ":read-only"
 ```
 
-(Hermes will preserve your override on re-migration as long as it lives outside the `# managed by hermes-agent` markers.)
+(Hermes will preserve your override on re-migration as long as it lives outside the `# managed by pace-agent` markers.)
 
 ## Auxiliary tasks and ChatGPT subscription token cost
 
@@ -265,7 +265,7 @@ When this runtime is on with the `openai-codex` provider, **auxiliary tasks (tit
 
 This isn't specific to `codex_app_server` — it's true for the existing `codex_responses` path too — but it's more visible here because you're explicitly opting in for the subscription billing.
 
-To route specific aux tasks to a cheaper / different model, set explicit overrides in `~/.hermes/config.yaml`:
+To route specific aux tasks to a cheaper / different model, set explicit overrides in `~/.pace/config.yaml`:
 
 ```yaml
 auxiliary:
@@ -290,13 +290,13 @@ The self-improvement review fork inherits the main runtime via `_current_main_ru
 Hermes wraps everything it manages between two marker comments:
 
 ```toml
-# managed by hermes-agent — `hermes codex-runtime migrate` regenerates this section
+# managed by pace-agent — `pace codex-runtime migrate` regenerates this section
 default_permissions = ":workspace"
 [mcp_servers.filesystem]
 ...
 [plugins."github@openai-curated"]
 ...
-# end hermes-agent managed section
+# end pace-agent managed section
 ```
 
 Anything **outside** that block is yours. Re-running migration (via `/codex-runtime codex_app_server` or whenever you toggle the runtime on) replaces the managed block in place but preserves user content above and below it verbatim. This means you can:
@@ -310,16 +310,16 @@ Anything you add **inside** the managed block will get clobbered on the next mig
 
 ## Multi-profile / multi-tenant setups
 
-By default, Hermes points the codex subprocess at `~/.codex/` regardless of which Hermes profile is active. This means `hermes -p work` and `hermes -p personal` share the same Codex auth, plugins, and config. For most users this is the right behavior — it matches what running `codex` CLI directly would do.
+By default, Hermes points the codex subprocess at `~/.codex/` regardless of which Hermes profile is active. This means `pace -p work` and `pace -p personal` share the same Codex auth, plugins, and config. For most users this is the right behavior — it matches what running `codex` CLI directly would do.
 
 If you want per-profile Codex isolation (separate auth, separate installed plugins, separate config), set `CODEX_HOME` explicitly per profile. The cleanest way is to point at a directory under your `HERMES_HOME`:
 
 ```bash
-# Inside the work profile, you might wrap hermes:
-CODEX_HOME=~/.hermes/profiles/work/codex hermes chat
+# Inside the work profile, you might wrap pace:
+CODEX_HOME=~/.pace/profiles/work/codex pace chat
 ```
 
-You'll need to re-run `codex login` once with that `CODEX_HOME` set so the OAuth tokens land in the profile-scoped location. After that, `hermes -p work` will operate on isolated Codex state.
+You'll need to re-run `codex login` once with that `CODEX_HOME` set so the OAuth tokens land in the profile-scoped location. After that, `pace -p work` will operate on isolated Codex state.
 
 We don't auto-scope this because moving an existing user's `~/.codex/` would silently invalidate their Codex CLI auth — anyone who already ran `codex login` would have to re-authenticate. Opt-in feels safer than surprising users.
 
@@ -369,7 +369,7 @@ Codex's built-in toolset covers shell/file ops/patches but doesn't have web sear
 [mcp_servers.hermes-tools]
 command = "/path/to/python"
 args = ["-m", "agent.transports.hermes_tools_mcp_server"]
-env = { HERMES_HOME = "/your/.hermes", PYTHONPATH = "...", HERMES_QUIET = "1" }
+env = { HERMES_HOME = "/your/.pace", PYTHONPATH = "...", HERMES_QUIET = "1" }
 startup_timeout_sec = 30.0
 tool_timeout_sec = 600.0
 ```
@@ -410,7 +410,7 @@ Known limitations:
 - **No inline patch preview in approval prompts when codex doesn't track the changeset.** Codex's `fileChange` approval params don't always carry the changeset. Hermes caches the data from the corresponding `item/started` notification when possible, but if approval arrives before the item has streamed, the prompt falls back to whatever `reason` codex provides.
 - **Sub-second cancellation isn't guaranteed.** Mid-stream interrupts (Ctrl+C while codex is responding) are sent via `turn/interrupt`, but if codex has already flushed the final message, you get the response anyway.
 
-If you find a bug, [open an issue](https://github.com/NousResearch/hermes-agent/issues) with the output of `hermes logs --since 5m`. Mention `codex-runtime` in the title so it's easy to triage.
+If you find a bug, [open an issue](https://github.com/NousResearch/pace-agent/issues) with the output of `pace logs --since 5m`. Mention `codex-runtime` in the title so it's easy to triage.
 
 ## Architecture
 
@@ -457,4 +457,4 @@ If you find a bug, [open an issue](https://github.com/NousResearch/hermes-agent/
         └──────────────────────────────────────────────────────────┘
 ```
 
-For implementation details, see [PR #24182](https://github.com/NousResearch/hermes-agent/pull/24182) and the [Codex app-server protocol README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md).
+For implementation details, see [PR #24182](https://github.com/NousResearch/pace-agent/pull/24182) and the [Codex app-server protocol README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md).

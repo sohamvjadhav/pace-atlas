@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Hermes Agent" width="100%">
+  <img src="assets/banner.png" alt="PACE Atlas" width="100%">
 </p>
 
 # Hermes Agent ☤
@@ -16,7 +16,7 @@
   <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Español-orange?style=for-the-badge" alt="Español"></a>
 </p>
 
-**The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
+PACE Atlas is an AI-powered Site Reliability Engineer that lives inside your cloud instance. It doesn't just check thresholds — it uses LLM knowledge to give context, spot patterns, predict incidents, and explain root causes like an experienced SRE colleague with 15+ years of on-call experience.
 
 Use any model you want — [Nous Portal](https://portal.nousresearch.com), OpenRouter, OpenAI, your own endpoint, and [many others](https://hermes-agent.nousresearch.com/docs/integrations/providers). Switch with `hermes model` — no code changes, no lock-in.
 
@@ -32,9 +32,18 @@ Use any model you want — [Nous Portal](https://portal.nousresearch.com), OpenR
 
 ---
 
-## Quick Install
+## Capabilities (v1.0)
 
-### Linux, macOS, WSL2, Termux
+| Capability | What it does |
+|-----------|-------------|
+| **Telemetry collection** | CPU, memory, disk, network, process, security, cloud, and log telemetry |
+| **Alert engine** | Hard-rule alerts with an LLM decision layer — context, patterns, correlation, not just thresholds |
+| **Root cause analysis** | Chain-of-causation analysis with prevention guidance |
+| **Security intelligence** | Attack-pattern recognition and threat-level assessment |
+| **Cost optimization** | Flags idle resources and over-provisioning |
+| **Predictive analysis** | Trend detection and forecasting |
+| **Feedback learning** | Improves from every alert and interaction |
+| **Interactive Q&A** | Ask about your infrastructure in plain language |
 
 ```bash
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
@@ -102,7 +111,7 @@ For more context, see the upstream Astral reports: [astral-sh/uv#13553](https://
 
 ---
 
-## Getting Started
+## Also on board
 
 ```bash
 hermes              # Interactive CLI — start a conversation
@@ -117,74 +126,48 @@ hermes update       # Update to the latest version
 hermes doctor       # Diagnose any issues
 ```
 
-📖 **[Full documentation →](https://hermes-agent.nousresearch.com/docs/)**
+- **Real terminal interface** — full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, streaming tool output
+- **Lives where you do** — Telegram, Discord, Slack, WhatsApp, Signal, and CLI, all from a single gateway process
+- **Closed learning loop** — agent-curated memory, autonomous skill creation, FTS5 session search with LLM summarization
+- **Scheduled automations** — built-in cron with natural-language schedules and delivery to any platform
+- **Delegation** — parallel subagents with isolated contexts
+- **Runs anywhere** — local, Docker, SSH, Modal, or a $5 VPS
 
 ---
 
-## Skip the API-key collection — Nous Portal
-
-Hermes works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, **[Nous Portal](https://portal.nousresearch.com)** covers all of them under one subscription:
-
-- **300+ models** — pick any of them with `/model <name>`
-- **Tool Gateway** — web search (Firecrawl), image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts.
-
-One command from a fresh install:
+## Quick start
 
 ```bash
-hermes setup --portal
+pip install pace-agent
+pace setup          # one-time configuration
+pace                # start PACE Atlas CLI
 ```
 
 That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with `hermes portal info`. Full details on the [Tool Gateway docs page](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway).
 
-You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing.
+```bash
+pace gateway start   # messaging gateway (Telegram, Slack, ...)
+pace model           # switch models / providers
+pace cron            # scheduled jobs
+pace skills          # manage skills
+pace dashboard       # web dashboard
+pace logs            # tail logs
+```
 
----
+Config lives in `~/.pace/` — config.yaml for settings, `.env` for API keys only, logs in `~/.pace/logs/`.
 
-## CLI vs Messaging Quick Reference
-
-Hermes has two entry points: start the terminal UI with `hermes`, or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces.
-
-| Action                         | CLI                                           | Messaging platforms                                                              |
-| ------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------- |
-| Start chatting                 | `hermes`                                      | Run `hermes gateway setup` + `hermes gateway start`, then send the bot a message |
-| Start fresh conversation       | `/new` or `/reset`                            | `/new` or `/reset`                                                               |
-| Change model                   | `/model [provider:model]`                     | `/model [provider:model]`                                                        |
-| Set a personality              | `/personality [name]`                         | `/personality [name]`                                                            |
-| Retry or undo the last turn    | `/retry`, `/undo`                             | `/retry`, `/undo`                                                                |
-| Compress context / check usage | `/compress`, `/usage`, `/insights [--days N]` | `/compress`, `/usage`, `/insights [days]`                                        |
-| Browse skills                  | `/skills` or `/<skill-name>`                  | `/<skill-name>`                                                                  |
-| Interrupt current work         | `Ctrl+C` or send a new message                | `/stop` or send a new message                                                    |
-| Platform-specific status       | `/platforms`                                  | `/status`, `/sethome`                                                            |
-
-For the full command lists, see the [CLI guide](https://hermes-agent.nousresearch.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
+Use any model you want — OpenRouter (200+ models), OpenAI, Anthropic, Google, Hugging Face, or your own endpoint. Switch with `pace model` — no code changes, no lock-in.
 
 ---
 
 ## Documentation
 
-All documentation lives at **[hermes-agent.nousresearch.com/docs](https://hermes-agent.nousresearch.com/docs/)**:
-
-| Section                                                                                             | What's Covered                                             |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart)                 | Install → setup → first conversation in 2 minutes          |
-| [CLI Usage](https://hermes-agent.nousresearch.com/docs/user-guide/cli)                              | Commands, keybindings, personalities, sessions             |
-| [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)                | Config file, providers, models, all options                |
-| [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](https://hermes-agent.nousresearch.com/docs/user-guide/security)                          | Command approval, DM pairing, container isolation          |
-| [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools)            | 40+ tools, toolset system, terminal backends               |
-| [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)              | Procedural memory, Skills Hub, creating skills             |
-| [Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory)                     | Persistent memory, user profiles, best practices           |
-| [MCP Integration](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)               | Connect any MCP server for extended capabilities           |
-| [Cron Scheduling](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)              | Scheduled tasks with platform delivery                     |
-| [Context Files](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files)       | Project context that shapes every conversation             |
-| [Architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture)             | Project structure, agent loop, key classes                 |
-| [Contributing](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing)             | Development setup, PR process, code style                  |
-| [CLI Reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands)                  | All commands and flags                                     |
-| [Environment Variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) | Complete env var reference                                 |
+- `docs/architecture.md` — system architecture and design
+- `REBRAND_LOG.md` — history of the PACE Atlas fork and its changes
 
 ---
 
-## Migrating from OpenClaw
+## Acknowledgements
 
 If you're coming from OpenClaw, Hermes can automatically import your settings, memories, skills, and API keys.
 
@@ -259,6 +242,4 @@ scripts/run_tests.sh
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
-Built by [Nous Research](https://nousresearch.com).
+[MIT](LICENSE)

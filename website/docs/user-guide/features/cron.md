@@ -49,9 +49,9 @@ Cron-run sessions cannot recursively create more cron jobs. Hermes disables cron
 ### From the standalone CLI
 
 ```bash
-hermes cron create "every 2h" "Check server status"
-hermes cron create "every 1h" "Summarize new feed items" --skill blogwatcher
-hermes cron create "every 1h" "Use both skills and combine the result" \
+pace cron create "every 2h" "Check server status"
+pace cron create "every 1h" "Summarize new feed items" --skill blogwatcher
+pace cron create "every 1h" "Use both skills and combine the result" \
   --skill blogwatcher \
   --skill maps \
   --name "Skill combo"
@@ -132,7 +132,7 @@ Cron jobs default to running detached from any repo — no `AGENTS.md`, `CLAUDE.
 
 ```bash
 # Standalone CLI (schedule and prompt are positional)
-hermes cron create "every 1d at 09:00" \
+pace cron create "every 1d at 09:00" \
   "Audit open PRs, summarize CI health, and post to #eng" \
   --workdir /home/me/projects/acme
 ```
@@ -179,12 +179,12 @@ The `<job_id>` placeholder below (and in [Lifecycle actions](#lifecycle-actions)
 ### Standalone CLI
 
 ```bash
-hermes cron edit <job_id> --schedule "every 4h"
-hermes cron edit <job_id> --prompt "Use the revised task"
-hermes cron edit <job_id> --skill blogwatcher --skill maps
-hermes cron edit <job_id> --add-skill maps
-hermes cron edit <job_id> --remove-skill blogwatcher
-hermes cron edit <job_id> --clear-skills
+pace cron edit <job_id> --schedule "every 4h"
+pace cron edit <job_id> --prompt "Use the revised task"
+pace cron edit <job_id> --skill blogwatcher --skill maps
+pace cron edit <job_id> --add-skill maps
+pace cron edit <job_id> --remove-skill blogwatcher
+pace cron edit <job_id> --clear-skills
 ```
 
 Notes:
@@ -211,14 +211,14 @@ Cron jobs now have a fuller lifecycle than just create/remove.
 ### Standalone CLI
 
 ```bash
-hermes cron list
-hermes cron pause <job_id_or_name>
-hermes cron resume <job_id_or_name>
-hermes cron run <job_id_or_name>
-hermes cron remove <job_id_or_name>
-hermes cron edit <job_id_or_name> [...flags]
-hermes cron status
-hermes cron tick
+pace cron list
+pace cron pause <job_id_or_name>
+pace cron resume <job_id_or_name>
+pace cron run <job_id_or_name>
+pace cron remove <job_id_or_name>
+pace cron edit <job_id_or_name> [...flags]
+pace cron status
+pace cron tick
 ```
 
 What they do:
@@ -236,19 +236,19 @@ What they do:
 **Cron execution is handled by the gateway daemon.** The gateway ticks the scheduler every 60 seconds, running any due jobs in isolated agent sessions.
 
 ```bash
-hermes gateway install     # Install as a user service
-sudo hermes gateway install --system   # Linux: boot-time system service for servers
-hermes gateway             # Or run in foreground
+pace gateway install     # Install as a user service
+sudo pace gateway install --system   # Linux: boot-time system service for servers
+pace gateway             # Or run in foreground
 
-hermes cron list
-hermes cron status
+pace cron list
+pace cron status
 ```
 
 ### Gateway scheduler behavior
 
 On each tick Hermes:
 
-1. loads jobs from `~/.hermes/cron/jobs.json`
+1. loads jobs from `~/.pace/cron/jobs.json`
 2. checks `next_run_at` against the current time
 3. starts a fresh `AIAgent` session for each due job
 4. optionally injects one or more attached skills into that fresh session
@@ -256,7 +256,7 @@ On each tick Hermes:
 6. delivers the final response
 7. updates run metadata and the next scheduled time
 
-A file lock at `~/.hermes/cron/.tick.lock` prevents overlapping scheduler ticks from double-running the same job batch.
+A file lock at `~/.pace/cron/.tick.lock` prevents overlapping scheduler ticks from double-running the same job batch.
 
 ### Execution history
 
@@ -279,7 +279,7 @@ When scheduling jobs, you specify where the output goes:
 | Option | Description | Example |
 |--------|-------------|---------|
 | `"origin"` | Back to where the job was created | Default on messaging platforms |
-| `"local"` | Save to local files only (`~/.hermes/cron/output/`) | Default on CLI |
+| `"local"` | Save to local files only (`~/.pace/cron/output/`) | Default on CLI |
 | `"telegram"` | Telegram home channel | Uses `TELEGRAM_HOME_CHANNEL` |
 | `"telegram:123456"` | Specific Telegram chat by ID | Direct delivery |
 | `"telegram:-100123:17585"` | Specific Telegram topic | `chat_id:thread_id` format |
@@ -340,7 +340,7 @@ Note: The agent cannot see this message, and therefore cannot respond to it.
 To deliver the raw agent output without the wrapper, set `cron.wrap_response` to `false`:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 cron:
   wrap_response: false
 ```
@@ -453,7 +453,7 @@ Failed jobs always deliver regardless of the `[SILENT]` marker — only successf
 Pre-run scripts (attached via the `script` parameter) have a default timeout of 3600 seconds (1 hour). This bounds the **script only** — skill-based / LLM-driven jobs run on a separate inactivity budget and are not capped by this value. If your scripts need a different limit, you can change it:
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 cron:
   script_timeout_seconds: 1800   # 30 minutes
 ```
@@ -465,7 +465,7 @@ Or set the `HERMES_CRON_SCRIPT_TIMEOUT` environment variable. The resolution ord
 For recurring jobs that don't need LLM reasoning — classic watchdogs, disk/memory alerts, heartbeats, CI pings — pass `no_agent=True` at creation time. The scheduler runs your script on schedule and delivers its stdout directly, skipping the agent entirely:
 
 ```bash
-hermes cron create "every 5m" \
+pace cron create "every 5m" \
   --no-agent \
   --script memory-watchdog.sh \
   --deliver telegram \
@@ -490,7 +490,7 @@ The `cronjob` tool's schema exposes `no_agent` to Hermes directly, so you can de
 Ping me on Telegram if RAM is over 85%, every 5 minutes.
 ```
 
-Hermes will write the check script to `~/.hermes/scripts/` via `write_file`, then call:
+Hermes will write the check script to `~/.pace/scripts/` via `write_file`, then call:
 
 ```python
 cronjob(action="create", schedule="every 5m",
@@ -510,7 +510,7 @@ Cron jobs run in isolated sessions with no memory of previous runs. But sometime
 # Job 1: Collect raw data
 cronjob(
     action="create",
-    prompt="Fetch the top 10 AI/ML stories from Hacker News. Save them to ~/.hermes/data/briefs/raw.md in markdown format with title, URL, and score.",
+    prompt="Fetch the top 10 AI/ML stories from Hacker News. Save them to ~/.pace/data/briefs/raw.md in markdown format with title, URL, and score.",
     schedule="0 7 * * *",
     name="AI News Collector",
 )
@@ -519,7 +519,7 @@ cronjob(
 # Get Job 1's ID from: cronjob(action="list")
 cronjob(
     action="create",
-    prompt="Read ~/.hermes/data/briefs/raw.md. Score each story 1–10 for engagement potential and novelty. Output the top 5 to ~/.hermes/data/briefs/ranked.md.",
+    prompt="Read ~/.pace/data/briefs/raw.md. Score each story 1–10 for engagement potential and novelty. Output the top 5 to ~/.pace/data/briefs/ranked.md.",
     schedule="30 7 * * *",
     context_from="<job1_id>",
     name="AI News Triage",
@@ -528,7 +528,7 @@ cronjob(
 # Job 3: Ship — receives Job 2's output as context
 cronjob(
     action="create",
-    prompt="Read ~/.hermes/data/briefs/ranked.md. Write 3 tweet drafts (hook + body + hashtags). Deliver to telegram:7976161601.",
+    prompt="Read ~/.pace/data/briefs/ranked.md. Write 3 tweet drafts (hook + body + hashtags). Deliver to telegram:7976161601.",
     schedule="0 8 * * *",
     context_from="<job2_id>",
     name="AI News Brief",
@@ -537,7 +537,7 @@ cronjob(
 
 **How it works:**
 
-- When Job 2 fires, Hermes reads Job 1's most recent output from `~/.hermes/cron/output/{job1_id}/*.md`
+- When Job 2 fires, Hermes reads Job 1's most recent output from `~/.pace/cron/output/{job1_id}/*.md`
 - That output is prepended to Job 2's prompt automatically
 - Job 2 doesn't need to hardcode "read this file" — it receives the content as context
 - The chain can be any length: Job 1 → Job 2 → Job 3 → ...
@@ -639,10 +639,10 @@ For `update`, pass `skills=[]` to remove all attached skills.
 
 ## Toolsets available to cron jobs
 
-Cron runs each job in a fresh agent session with no chat platform attached. By default the cron agent gets **the toolset you configured for the `cron` platform in `hermes tools`** — not the CLI default, not everything under the sun.
+Cron runs each job in a fresh agent session with no chat platform attached. By default the cron agent gets **the toolset you configured for the `cron` platform in `pace tools`** — not the CLI default, not everything under the sun.
 
 ```bash
-hermes tools
+pace tools
 # → pick the "cron" platform in the curses UI
 # → toggle toolsets on/off just like you would for Telegram/Discord/etc.
 ```
@@ -690,9 +690,9 @@ The `wakeAgent` gate gives you a $0 way to decide whether a scheduled job should
 
 ```bash
 #!/bin/bash
-# ~/.hermes/scripts/feed-changed.sh
+# ~/.pace/scripts/feed-changed.sh
 FEED="$HOME/data/feed.json"
-STATE="$HOME/.hermes/scripts/.feed-changed.last"
+STATE="$HOME/.pace/scripts/.feed-changed.last"
 test -f "$FEED" || { echo '{"wakeAgent": false}'; exit 0; }
 mtime=$(stat -c %Y "$FEED")
 last=$(cat "$STATE" 2>/dev/null || echo 0)
@@ -715,7 +715,7 @@ cronjob(action="create", name="process-feed",
 
 ```bash
 #!/bin/bash
-# ~/.hermes/scripts/flag-ready.sh
+# ~/.pace/scripts/flag-ready.sh
 if test -f /tmp/new-data-ready; then
   rm -f /tmp/new-data-ready
   echo '{"wakeAgent": true}'
@@ -735,7 +735,7 @@ cronjob(action="create", name="nightly-analysis",
 
 ```python
 #!/usr/bin/env python
-# ~/.hermes/scripts/new-rows.py
+# ~/.pace/scripts/new-rows.py
 import json, sqlite3
 conn = sqlite3.connect("/home/me/data/app.db")
 n = conn.execute(
@@ -757,10 +757,10 @@ cronjob(action="create", name="summarize-new-msgs",
 The same pattern works for any data source you can query from a script — Postgres, an HTTP API, your own state store — without baking a SQL evaluator into the cron subsystem.
 
 :::tip
-Hermes's own `~/.hermes/state.db` is an internal schema that changes between releases. Don't query it from a pre-run gate — point at your own database or feed instead.
+Hermes's own `~/.pace/state.db` is an internal schema that changes between releases. Don't query it from a pre-run gate — point at your own database or feed instead.
 :::
 
-Credit: this recipe set was prompted by @iankar8's exploration in [#2654](https://github.com/NousResearch/hermes-agent/pull/2654), which proposed adding sql/file/command triggers as a parallel mechanism. The `script` + `wakeAgent` gate already covers all three cases at $0, so the work landed as documentation instead.
+Credit: this recipe set was prompted by @iankar8's exploration in [#2654](https://github.com/NousResearch/pace-agent/pull/2654), which proposed adding sql/file/command triggers as a parallel mechanism. The `script` + `wakeAgent` gate already covers all three cases at $0, so the work landed as documentation instead.
 
 ### Chaining jobs: `context_from`
 
@@ -777,7 +777,7 @@ The referenced jobs' most recent completed outputs are injected above the prompt
 
 ## Job storage
 
-Jobs are stored in `~/.hermes/cron/jobs.json`. Output from job runs is saved to `~/.hermes/cron/output/{job_id}/{timestamp}.md`.
+Jobs are stored in `~/.pace/cron/jobs.json`. Output from job runs is saved to `~/.pace/cron/output/{job_id}/{timestamp}.md`.
 
 :::tip
 Ask the agent to manage jobs through the `cronjob` tool, `hermes cron edit`, or `/cron` — not by patching `jobs.json` directly. Direct edits can fail silently when [file write safety](../security.md#file-write-safety) blocks the path (for example when `HERMES_WRITE_SAFE_ROOT` is set), and the [file-mutation verifier](../configuration.md#file-mutation-verifier) footer is the authoritative signal that nothing was saved.

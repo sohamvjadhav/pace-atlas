@@ -11,7 +11,7 @@ description: "One subscription, 300+ frontier models, and the Tool Gateway — t
 If you only have time to set up one thing, set up this. The fastest path:
 
 ```bash
-hermes setup --portal
+pace setup --portal
 ```
 
 That single command runs the Portal OAuth, lets you pick a Nous model, sets Nous as your inference provider in `config.yaml`, and turns on the Tool Gateway. You're ready to `hermes chat` immediately after.
@@ -66,7 +66,7 @@ You can also enable just specific gateway tools (e.g. web search but not image g
 
 ### No credentials in your dotfiles
 
-Because everything routes through one OAuth-authenticated Portal session, you don't accumulate a `.env` file with a dozen long-lived API keys. The refresh token at `~/.hermes/auth.json` is the only credential on disk, and Hermes mints short-lived JWTs from it per request — see [Token handling](#token-handling) below.
+Because everything routes through one OAuth-authenticated Portal session, you don't accumulate a `.env` file with a dozen long-lived API keys. The refresh token at `~/.pace/auth.json` is the only credential on disk, and Hermes mints short-lived JWTs from it per request — see [Token handling](#token-handling) below.
 
 ### Cross-platform parity
 
@@ -92,7 +92,7 @@ The Portal's own [model info page](https://portal.nousresearch.com/info) carries
 ### Fresh install — one command
 
 ```bash
-hermes setup --portal
+pace setup --portal
 ```
 
 This runs the full setup in one shot:
@@ -111,12 +111,12 @@ If you don't have a subscription yet, sign up at [portal.nousresearch.com/manage
 If you already have Hermes configured with OpenRouter, Anthropic, or any other provider and you want to add the Portal alongside them:
 
 ```bash
-hermes model
+pace model
 # pick "Nous Portal" from the provider list
 # browser opens, sign in, done
 ```
 
-Your existing providers stay configured. You can switch between them with `/model` mid-session or `hermes model` between sessions — the Portal becomes one of your available providers, not your only one.
+Your existing providers stay configured. You can switch between them with `/model` mid-session or `pace model` between sessions — the Portal becomes one of your available providers, not your only one.
 
 ### Headless / SSH / remote setup
 
@@ -178,33 +178,33 @@ Or open the picker:
 Outside a session (the full setup wizard, useful when adding a new provider):
 
 ```bash
-hermes model
+pace model
 ```
 
 ### Mixing the gateway with your own backends
 
-If you already have, say, a Browserbase account and want to keep using it while routing web search and image generation through Nous, that's supported. Use `hermes tools` to pick backends per tool:
+If you already have, say, a Browserbase account and want to keep using it while routing web search and image generation through Nous, that's supported. Use `pace tools` to pick backends per tool:
 
 ```bash
-hermes tools
+pace tools
 # → Web search       → "Nous Subscription"
 # → Image generation → "Nous Subscription"
 # → Browser          → "Browserbase"  (your existing key)
 # → TTS              → "Nous Subscription"
 ```
 
-The Tool Gateway is opt-in per tool, not all-or-nothing. The managed backends show up in `hermes tools` whether or not you're logged into Nous Portal — if you pick "Nous Subscription" before authenticating, Hermes runs the Portal login inline (it won't change your inference provider or touch your other tools). See the [Tool Gateway docs](/user-guide/features/tool-gateway) for the full per-tool configuration matrix.
+The Tool Gateway is opt-in per tool, not all-or-nothing. The managed backends show up in `pace tools` whether or not you're logged into Nous Portal — if you pick "Nous Subscription" before authenticating, Hermes runs the Portal login inline (it won't change your inference provider or touch your other tools). See the [Tool Gateway docs](/user-guide/features/tool-gateway) for the full per-tool configuration matrix.
 
 ### Subscription management
 
 Manage your plan, view usage, or upgrade/cancel at any time:
 
 - **Web:** [portal.nousresearch.com/manage-subscription](https://portal.nousresearch.com/manage-subscription)
-- **CLI shortcut:** `hermes portal open` (opens the same page in your default browser)
+- **CLI shortcut:** `pace portal open` (opens the same page in your default browser)
 
 ## Configuration reference
 
-After `hermes setup --portal`, `~/.hermes/config.yaml` will look like:
+After `pace setup --portal`, `~/.pace/config.yaml` will look like:
 
 ```yaml
 model:
@@ -232,13 +232,13 @@ browser:
   use_gateway: true
 ```
 
-The OAuth refresh token is stored separately at `~/.hermes/auth.json` (not in `config.yaml` — credentials and configuration are kept separate by design).
+The OAuth refresh token is stored separately at `~/.pace/auth.json` (not in `config.yaml` — credentials and configuration are kept separate by design).
 
 ## Token handling
 
 Hermes mints a short-lived JWT from your stored Portal refresh token on each inference call rather than reusing a long-lived API key. The token lifecycle is fully automatic — refresh, mint, retry on transient 401 — and you never see it.
 
-If the Portal invalidates the refresh token (password change, manual revoke, session expiry), the invalid refresh token is **quarantined locally** so Hermes stops replaying it and you don't see a stream of identical 401s. The next call surfaces a clear "re-authentication required" message. Run `hermes auth add nous` to log in again; the quarantine clears on the next successful login.
+If the Portal invalidates the refresh token (password change, manual revoke, session expiry), the invalid refresh token is **quarantined locally** so Hermes stops replaying it and you don't see a stream of identical 401s. The next call surfaces a clear "re-authentication required" message. Run `pace auth add nous` to log in again; the quarantine clears on the next successful login.
 
 ## Troubleshooting
 
@@ -250,11 +250,11 @@ You haven't completed the OAuth flow, or your refresh token was wiped. Run:
 hermes portal
 ```
 
-or use `hermes model` and re-select Nous Portal.
+or use `pace model` and re-select Nous Portal.
 
 ### Got a "re-authentication required" message mid-session
 
-Your Portal refresh token was invalidated (password change, manual revoke, or session expiry). Run `hermes auth add nous` and your next request will use the new credentials. Any quarantine on the old token clears automatically on successful re-login.
+Your Portal refresh token was invalidated (password change, manual revoke, or session expiry). Run `pace auth add nous` and your next request will use the new credentials. Any quarantine on the old token clears automatically on successful re-login.
 
 ### Want to use a specific provider model that the Portal doesn't expose
 
@@ -264,7 +264,7 @@ The Portal routes each model to a suitable backend — some through OpenRouter, 
 /model anthropic/claude-opus-4.6
 ```
 
-If a model is genuinely missing, [open an issue](https://github.com/NousResearch/hermes-agent/issues) — we surface the Portal's catalog to Hermes and gaps usually mean a routing config we can update.
+If a model is genuinely missing, [open an issue](https://github.com/NousResearch/pace-agent/issues) — we surface the Portal's catalog to Hermes and gaps usually mean a routing config we can update.
 
 ### Bills not appearing on my Portal account
 

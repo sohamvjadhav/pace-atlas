@@ -4,7 +4,7 @@
 
 ntfy makes a great lightweight push channel for Hermes: subscribe to a topic from the [ntfy mobile app](https://ntfy.sh/docs/subscribe/phone/), send messages to the topic to talk to the agent, get the response back on your phone.
 
-> Run `hermes gateway setup` and pick **ntfy** for a guided walk-through.
+> Run `pace gateway setup` and pick **ntfy** for a guided walk-through.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ Select **ntfy** and follow the prompts.
 
 ### Via environment variables
 
-Add these to `~/.hermes/.env`:
+Add these to `~/.pace/.env`:
 
 ```
 NTFY_TOPIC=hermes-myname-2026
@@ -66,9 +66,9 @@ In all cases, do not put sensitive data through ntfy unless the underlying topic
 2. On your phone: install the [ntfy app](https://ntfy.sh/docs/subscribe/phone/), tap **+**, enter `hermes-myname-2026`
 3. On the host:
    ```bash
-   echo 'NTFY_TOPIC=hermes-myname-2026' >> ~/.hermes/.env
-   echo 'NTFY_ALLOWED_USERS=hermes-myname-2026' >> ~/.hermes/.env
-   hermes gateway restart
+   echo 'NTFY_TOPIC=hermes-myname-2026' >> ~/.pace/.env
+   echo 'NTFY_ALLOWED_USERS=hermes-myname-2026' >> ~/.pace/.env
+   pace gateway restart
    ```
 4. From the ntfy app, send a message to the topic. The agent's reply lands as a push notification.
 
@@ -110,7 +110,7 @@ Then point Hermes at it:
 
 ```
 NTFY_SERVER_URL=https://ntfy.mydomain.com
-NTFY_TOPIC=hermes
+NTFY_TOPIC=pace
 NTFY_TOKEN=tk_abc123  # if you've set up access control
 ```
 

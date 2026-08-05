@@ -14,7 +14,7 @@ Provision Twilio numbers, SMS/MMS, and AI outbound calls.
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/productivity/telephony` |
+| Source | Optional — install with `pace skills install official/productivity/telephony` |
 | Path | `optional-skills/productivity/telephony` |
 | Version | `1.0.0` |
 | Author | Nous Research |
@@ -132,7 +132,7 @@ Used for long-lived provider credentials and owned-number IDs, for example:
 - `VAPI_PHONE_NUMBER_ID`
 - `PHONE_PROVIDER` (AI call provider: bland or vapi)
 
-### `~/.hermes/telephony_state.json`
+### `~/.pace/telephony_state.json`
 Used for skill-only state that should survive across sessions, for example:
 - remembered default Twilio number / SID
 - remembered Vapi phone number ID
@@ -147,7 +147,7 @@ This means:
 After installing this skill, locate the script like this:
 
 ```bash
-SCRIPT="$(find ~/.hermes/skills -path '*/telephony/scripts/telephony.py' -print -quit)"
+SCRIPT="$(find ~/.pace/skills -path '*/telephony/scripts/telephony.py' -print -quit)"
 ```
 
 If `SCRIPT` is empty, the skill is not installed yet.
@@ -157,8 +157,8 @@ If `SCRIPT` is empty, the skill is not installed yet.
 This is an official optional skill, so install it from the Skills Hub:
 
 ```bash
-hermes skills search telephony
-hermes skills install official/productivity/telephony
+pace skills search telephony
+pace skills install official/productivity/telephony
 ```
 
 ## Provider setup

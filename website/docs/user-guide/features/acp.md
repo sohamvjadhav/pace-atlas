@@ -45,7 +45,7 @@ cd ~/.hermes/hermes-agent && uv pip install -e '.[acp]'
 
 This installs the `agent-client-protocol` dependency and enables:
 
-- `hermes acp`
+- `pace acp`
 - `hermes-acp`
 - `python -m acp_adapter`
 
@@ -54,7 +54,7 @@ This installs the `agent-client-protocol` dependency and enables:
 Any of the following starts Hermes in ACP mode:
 
 ```bash
-hermes acp
+pace acp
 ```
 
 ```bash
@@ -70,8 +70,8 @@ Hermes logs to stderr so stdout remains reserved for ACP JSON-RPC traffic.
 For non-interactive checks:
 
 ```bash
-hermes acp --version
-hermes acp --check
+pace acp --version
+pace acp --check
 ```
 
 ### Browser tools (optional)
@@ -81,8 +81,8 @@ Browser tools (`browser_navigate`, `browser_click`, etc.) depend on the
 wheel. Install them with:
 
 ```bash
-hermes acp --setup-browser           # interactive (prompts before ~400 MB download)
-hermes acp --setup-browser --yes     # accept the download non-interactively
+pace acp --setup-browser           # interactive (prompts before ~400 MB download)
+pace acp --setup-browser --yes     # accept the download non-interactively
 ```
 
 This is the standalone command. The terminal-auth flow (`hermes acp --setup`) also offers the browser bootstrap as a follow-up question after model selection, so most users never need to run `--setup-browser` directly.
@@ -187,7 +187,7 @@ If you want to define Hermes manually, add it through VS Code settings under `ac
 {
   "acp.agents": {
     "Hermes Agent": {
-      "command": "hermes",
+      "command": "pace",
       "args": ["acp"]
     }
   }
@@ -204,9 +204,9 @@ Configure Hermes as a custom agent server in Zed settings:
 ```json
 {
   "agent_servers": {
-    "hermes-agent": {
+    "pace-agent": {
       "type": "custom",
-      "command": "hermes",
+      "command": "pace",
       "args": ["acp"]
     }
   }
@@ -282,10 +282,10 @@ command from everyone else.
 
 ACP mode uses the same Hermes configuration as the CLI:
 
-- `~/.hermes/.env`
-- `~/.hermes/config.yaml`
-- `~/.hermes/skills/`
-- `~/.hermes/state.db`
+- `~/.pace/.env`
+- `~/.pace/config.yaml`
+- `~/.pace/skills/`
+- `~/.pace/state.db`
 
 Provider resolution uses Hermes' normal runtime resolver, so ACP inherits the currently configured provider and credentials. Hermes also advertises a terminal auth method (`--setup`) for first-run ACP clients; this opens Hermes' interactive model/provider setup.
 
@@ -374,10 +374,10 @@ Check:
 Try these checks:
 
 ```bash
-hermes acp --version
-hermes acp --check
-hermes doctor
-hermes status
+pace acp --version
+pace acp --check
+pace doctor
+pace status
 ```
 
 ### Missing credentials
@@ -385,7 +385,7 @@ hermes status
 ACP mode uses Hermes' existing provider setup. Configure credentials with:
 
 ```bash
-hermes model
+pace model
 ```
 
 or by editing `~/.hermes/.env`. The terminal auth flow (`hermes acp --setup`) can also trigger the interactive provider/model setup.

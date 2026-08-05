@@ -17,7 +17,7 @@ Two files make up the agent's memory:
 | **MEMORY.md** | Agent's personal notes — environment facts, conventions, things learned | 2,200 chars (~800 tokens) |
 | **USER.md** | User profile — your preferences, communication style, expectations | 1,375 chars (~500 tokens) |
 
-Both are stored in `~/.hermes/memories/` and are injected into the system prompt as a frozen snapshot at session start. The agent manages its own memory via the `memory` tool — it can add, replace, or remove entries.
+Both are stored in `~/.pace/memories/` and are injected into the system prompt as a frozen snapshot at session start. The agent manages its own memory via the `memory` tool — it can add, replace, or remove entries.
 
 :::info
 Character limits keep memory focused. Memory does **not** auto-compact: when a
@@ -182,13 +182,13 @@ Memory entries are scanned for injection and exfiltration patterns before being 
 
 Beyond MEMORY.md and USER.md, the agent can search its past conversations using the `session_search` tool:
 
-- All CLI and messaging sessions are stored in SQLite (`~/.hermes/state.db`) with FTS5 full-text search
+- All CLI and messaging sessions are stored in SQLite (`~/.pace/state.db`) with FTS5 full-text search
 - Search queries return actual messages from the DB — no LLM summarization, no truncation
 - The agent can find things it discussed weeks ago, even if they're not in its active memory
 - The agent can also scroll forward/backward inside any session it finds
 
 ```bash
-hermes sessions list    # Browse past sessions
+pace sessions list    # Browse past sessions
 ```
 
 See [Session Search Tool](/user-guide/sessions#session-search-tool) for the three calling shapes (discovery / scroll / browse) and the response format.
@@ -227,7 +227,7 @@ The same `list` / `delete <id>` / `edit <id>` subcommands work from the in-chat 
 ## Configuration
 
 ```yaml
-# In ~/.hermes/config.yaml
+# In ~/.pace/config.yaml
 memory:
   memory_enabled: true
   user_profile_enabled: true
@@ -348,8 +348,8 @@ For deeper, persistent memory that goes beyond MEMORY.md and USER.md, Hermes shi
 External providers run **alongside** built-in memory (never replacing it) and add capabilities like knowledge graphs, semantic search, automatic fact extraction, and cross-session user modeling.
 
 ```bash
-hermes memory setup      # pick a provider and configure it
-hermes memory status     # check what's active
+pace memory setup      # pick a provider and configure it
+pace memory status     # check what's active
 ```
 
 See the [Memory Providers](./memory-providers.md) guide for full details on each provider, setup instructions, and comparison.

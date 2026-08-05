@@ -35,14 +35,14 @@ The following is the complete skill definition that Hermes loads when this skill
 
 There are two places a SKILL.md can live:
 
-1. **User-local:** `~/.hermes/skills/<maybe-category>/<name>/SKILL.md` — personal, not shared. Created via `skill_manage(action='create')`.
-2. **In-repo (this skill is about this case):** `/home/bb/hermes-agent/skills/<category>/<name>/SKILL.md` — committed, shipped with the package. Use `write_file` + `git add`. `skill_manage(action='create')` does NOT target this tree.
+1. **User-local:** `~/.pace/skills/<maybe-category>/<name>/SKILL.md` — personal, not shared. Created via `skill_manage(action='create')`.
+2. **In-repo (this skill is about this case):** `/home/bb/pace-agent/skills/<category>/<name>/SKILL.md` — committed, shipped with the package. Use `write_file` + `git add`. `skill_manage(action='create')` does NOT target this tree.
 
 ## When to Use
 
 - User asks you to add a skill "in this branch / repo / commit"
-- You're committing a reusable workflow that should ship with hermes-agent
-- You're editing an existing skill under `/home/bb/hermes-agent/skills/` (use `patch` for small edits, `write_file` for rewrites; `skill_manage` still works for patch on in-repo skills, but not for `create`)
+- You're committing a reusable workflow that should ship with pace-agent
+- You're editing an existing skill under `/home/bb/pace-agent/skills/` (use `patch` for small edits, `write_file` for rewrites; `skill_manage` still works for patch on in-repo skills, but not for `create`)
 
 ## Required Frontmatter
 
@@ -69,7 +69,7 @@ version: 1.1.0
 author: Hermes Agent
 license: MIT
 metadata:
-  hermes:
+  pace:
     tags: [short, descriptive, tags]
     related_skills: [other-skill, another-skill]
 ---
@@ -174,7 +174,7 @@ Pick the closest existing category. Don't invent new top-level categories casual
 
 ## Cross-Referencing Other Skills
 
-`metadata.hermes.related_skills` unions both trees (`skills/` in-repo and `~/.hermes/skills/`) at load time. You CAN reference a user-local skill from an in-repo skill, but it won't resolve for other users who clone the repo fresh. Prefer referencing only in-repo skills from in-repo skills. If a frequently-referenced skill lives only in `~/.hermes/skills/`, consider promoting it to the repo.
+`metadata.pace.related_skills` unions both trees (`skills/` in-repo and `~/.pace/skills/`) at load time. You CAN reference a user-local skill from an in-repo skill, but it won't resolve for other users who clone the repo fresh. Prefer referencing only in-repo skills from in-repo skills. If a frequently-referenced skill lives only in `~/.pace/skills/`, consider promoting it to the repo.
 
 ## Editing Existing In-Repo Skills
 
@@ -185,7 +185,7 @@ Pick the closest existing category. Don't invent new top-level categories casual
 
 ## Common Pitfalls
 
-1. **Using `skill_manage(action='create')` for an in-repo skill.** It writes to `~/.hermes/skills/`, not the repo tree. Use `write_file` for in-repo creation.
+1. **Using `skill_manage(action='create')` for an in-repo skill.** It writes to `~/.pace/skills/`, not the repo tree. Use `write_file` for in-repo creation.
 
 2. **Leading whitespace before `---`.** The validator checks `content.startswith("---")`; any leading blank line or BOM fails validation.
 
@@ -209,9 +209,9 @@ Pick the closest existing category. Don't invent new top-level categories casual
 
 ## Verification Checklist
 
-- [ ] File is at `skills/<category>/<name>/SKILL.md` (not in `~/.hermes/skills/`)
+- [ ] File is at `skills/<category>/<name>/SKILL.md` (not in `~/.pace/skills/`)
 - [ ] Frontmatter starts at byte 0 with `---`, closes with `\n---\n`
-- [ ] `name`, `description`, `version`, `author`, `license`, `metadata.hermes.{tags, related_skills}` all present
+- [ ] `name`, `description`, `version`, `author`, `license`, `metadata.pace.{tags, related_skills}` all present
 - [ ] Name ≤ 64 chars, lowercase + hyphens
 - [ ] Description ≤ 1024 chars, trigger phrase self-contained within first 57 chars,
       and starts with "Use when ..."

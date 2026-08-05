@@ -1,15 +1,15 @@
 # Bitwarden Secrets Manager
 
-Pull API keys from [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/) at process startup instead of storing them in plaintext inside `~/.hermes/.env`. One bootstrap secret (a machine-account access token) replaces N per-provider keys, and rotating a credential becomes a single change in the Bitwarden web app.
+Pull API keys from [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/) at process startup instead of storing them in plaintext inside `~/.pace/.env`. One bootstrap secret (a machine-account access token) replaces N per-provider keys, and rotating a credential becomes a single change in the Bitwarden web app.
 
 ## How it works
 
 1. You create a **machine account** in Bitwarden Secrets Manager, give it read access to a project, and generate an **access token**.
-2. Hermes stores that single token in `~/.hermes/.env` as `BWS_ACCESS_TOKEN`.
-3. Every time `hermes` (or the gateway, or a cron job) starts, after `~/.hermes/.env` has loaded, Hermes calls `bws secret list <project_id>` and sets the returned keys into `os.environ`.
+2. Hermes stores that single token in `~/.pace/.env` as `BWS_ACCESS_TOKEN`.
+3. Every time `pace` (or the gateway, or a cron job) starts, after `~/.pace/.env` has loaded, Hermes calls `bws secret list <project_id>` and sets the returned keys into `os.environ`.
 4. By default Hermes **overrides** values already in your environment, so Bitwarden is the source of truth — rotate a key once in the web app and every Hermes process picks it up on next start. Flip `override_existing: false` in config if you want `.env` to win instead.
 
-The `bws` binary is auto-downloaded into `~/.hermes/bin/` on first use — no `apt`, no `brew`, no `sudo`.
+The `bws` binary is auto-downloaded into `~/.pace/bin/` on first use — no `apt`, no `brew`, no `sudo`.
 
 ## Why machine accounts (and why no 2FA prompt)
 
@@ -34,13 +34,13 @@ Secrets Manager is included on the Bitwarden free tier with limits; no paid plan
 ### 2. Run the wizard
 
 ```bash
-hermes secrets bitwarden setup
+pace secrets bitwarden setup
 ```
 
 It will:
 
-1. Download and verify `bws v2.0.0` into `~/.hermes/bin/bws`.
-2. Prompt you for the access token (input is hidden). Stored in `~/.hermes/.env` as `BWS_ACCESS_TOKEN`.
+1. Download and verify `bws v2.0.0` into `~/.pace/bin/bws`.
+2. Prompt you for the access token (input is hidden). Stored in `~/.pace/.env` as `BWS_ACCESS_TOKEN`.
 3. Ask which Bitwarden region your machine account belongs to — **US Cloud**, **EU Cloud**, or **self-hosted / custom URL**. Stored in `config.yaml` as `secrets.bitwarden.server_url` and passed to `bws` as `BWS_SERVER_URL`.
 4. List the projects the machine account can see; pick one. Stored in `config.yaml` as `secrets.bitwarden.project_id`.
 5. Test-fetch the project's secrets and show you which env vars will resolve.
@@ -49,7 +49,7 @@ It will:
 Non-interactive setup is also supported via flags:
 
 ```bash
-hermes secrets bitwarden setup \
+pace secrets bitwarden setup \
   --access-token "$BWS_ACCESS_TOKEN" \
   --server-url https://vault.bitwarden.eu \
   --project-id <project-uuid>
@@ -58,10 +58,10 @@ hermes secrets bitwarden setup \
 ### 3. Confirm
 
 ```bash
-hermes secrets bitwarden status
+pace secrets bitwarden status
 ```
 
-From now on, every `hermes` invocation pulls fresh secrets at startup. You'll see a one-line summary in stderr the first time secrets are applied in a process.
+From now on, every `pace` invocation pulls fresh secrets at startup. You'll see a one-line summary in stderr the first time secrets are applied in a process.
 
 ## CLI
 
@@ -95,7 +95,7 @@ The command probes Bitwarden with the new token **before** writing anything — 
 
 ## Configuration
 
-Defaults in `~/.hermes/config.yaml`:
+Defaults in `~/.pace/config.yaml`:
 
 ```yaml
 secrets:
@@ -122,7 +122,7 @@ secrets:
 | `encrypted_cache.enabled` | `false` | Store the last successful fetch in an AES-GCM encrypted cache at `~/.hermes/cache/bws_cache.enc.json`. |
 | `encrypted_cache.max_stale_seconds` | `0` | When encrypted caching is enabled, allow that cache to be used only after network/timeout failures, up to this age. Authentication failures never use stale secrets. A successful encrypted write removes the legacy plaintext `cache/bws_cache.json`. |
 | `override_existing` | `true` | When true, Bitwarden values overwrite anything already in env (so rotation in the web app actually takes effect). Flip to `false` if you want `.env` / shell exports to win locally. |
-| `auto_install` | `true` | When true, `bws` is auto-downloaded into `~/.hermes/bin/` on first use. |
+| `auto_install` | `true` | When true, `bws` is auto-downloaded into `~/.pace/bin/` on first use. |
 
 ## Failure modes
 
@@ -148,7 +148,7 @@ Startup warnings now include a `→` remediation line telling you exactly which 
 
 ## When NOT to use this
 
-- **Single-machine personal setups** where `~/.hermes/.env` is fine. You're trading one credential for another and adding a network dependency at startup.
+- **Single-machine personal setups** where `~/.pace/.env` is fine. You're trading one credential for another and adding a network dependency at startup.
 - **Air-gapped environments** that can't reach `api.bitwarden.com`.
 - **CI/CD** where the existing secrets-injection mechanism (GitHub Actions secrets, Vault, etc.) is already set up — pick one path, not two.
 

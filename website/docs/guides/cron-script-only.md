@@ -51,7 +51,7 @@ The real win of no-agent mode is that the agent itself can set up the watchdog f
 
 > **You:** ping me on telegram if RAM is over 85% every 5 minutes
 >
-> **Hermes:** *(writes `~/.hermes/scripts/memory-watchdog.sh`, then calls `cronjob(...)` with `no_agent=true`)*
+> **Hermes:** *(writes `~/.pace/scripts/memory-watchdog.sh`, then calls `cronjob(...)` with `no_agent=true`)*
 >
 > Set up. Runs every 5 min, alerts Telegram only when RAM is over 85%. Script: `memory-watchdog.sh`. Job ID: `abc123`.
 
@@ -60,7 +60,7 @@ Under the hood, the agent makes two tool calls:
 ```python
 # 1. Write the check script
 write_file(
-    path="~/.hermes/scripts/memory-watchdog.sh",
+    path="~/.pace/scripts/memory-watchdog.sh",
     content='''#!/usr/bin/env bash
 ram_pct=$(free | awk '/^Mem:/ {printf "%d", $3 * 100 / $2}')
 if [ "$ram_pct" -ge 85 ]; then
@@ -97,7 +97,7 @@ The agent can pause, resume, edit, and remove jobs the same way it creates them:
 >
 > **Hermes:** *(calls `cronjob(action='pause', job_id='abc123')`)*
 >
-> Paused. Resume with "turn it back on" or via `hermes cron resume abc123`.
+> Paused. Resume with "turn it back on" or via `pace cron resume abc123`.
 
 > **You:** change it to every 15 minutes
 >
@@ -111,7 +111,7 @@ Prefer the shell? The CLI path gives you the same result with three commands:
 
 ```bash
 # 1. Write your script
-cat > ~/.hermes/scripts/memory-watchdog.sh <<'EOF'
+cat > ~/.pace/scripts/memory-watchdog.sh <<'EOF'
 #!/usr/bin/env bash
 # Alert when RAM usage is over 85%. Silent otherwise.
 RAM_PCT=$(free | awk '/^Mem:/ {printf "%d", $3 * 100 / $2}')
@@ -120,18 +120,18 @@ if [ "$RAM_PCT" -ge 85 ]; then
 fi
 # Empty stdout = silent run; no message sent.
 EOF
-chmod +x ~/.hermes/scripts/memory-watchdog.sh
+chmod +x ~/.pace/scripts/memory-watchdog.sh
 
 # 2. Schedule it
-hermes cron create "every 5m" \
+pace cron create "every 5m" \
   --no-agent \
   --script memory-watchdog.sh \
   --deliver telegram \
   --name "memory-watchdog"
 
 # 3. Verify
-hermes cron list
-hermes cron run <job_id>    # fire it once to test
+pace cron list
+pace cron run <job_id>    # fire it once to test
 ```
 
 That's the whole thing. No prompt, no skill, no model.
@@ -151,7 +151,7 @@ The "silent when empty" behavior is the key to the classic watchdog pattern: the
 
 ## Script Rules
 
-Scripts must live in `~/.hermes/scripts/`. This is enforced at both job-creation time and run time — absolute paths, `~/` expansion, and path-traversal patterns (`../`) are rejected. The same directory is shared with the pre-check script gate used by LLM jobs.
+Scripts must live in `~/.pace/scripts/`. This is enforced at both job-creation time and run time — absolute paths, `~/` expansion, and path-traversal patterns (`../`) are rejected. The same directory is shared with the pre-check script gate used by LLM jobs.
 
 Interpreter choice is by file extension:
 
@@ -167,10 +167,10 @@ We intentionally do NOT honour `#!/...` shebangs — keeping the interpreter set
 Same as all other cron jobs:
 
 ```bash
-hermes cron create "every 5m"        # interval
-hermes cron create "every 2h"
-hermes cron create "0 9 * * *"       # standard cron: 9am daily
-hermes cron create "30m"             # one-shot: run once in 30 minutes
+pace cron create "every 5m"        # interval
+pace cron create "every 2h"
+pace cron create "0 9 * * *"       # standard cron: 9am daily
+pace cron create "30m"             # one-shot: run once in 30 minutes
 ```
 
 See the [cron feature reference](/user-guide/features/cron) for the full syntax.
@@ -186,21 +186,21 @@ See the [cron feature reference](/user-guide/features/cron) for the full syntax.
 --deliver discord:#ops
 --deliver slack:#engineering
 --deliver signal:+15551234567
---deliver local                          # just save to ~/.hermes/cron/output/
+--deliver local                          # just save to ~/.pace/cron/output/
 ```
 
-No running gateway is required at script-run time for bot-token platforms (Telegram, Discord, Slack, Signal, SMS, WhatsApp) — the tool calls each platform's REST endpoint directly using the credentials already in `~/.hermes/.env` / `~/.hermes/config.yaml`.
+No running gateway is required at script-run time for bot-token platforms (Telegram, Discord, Slack, Signal, SMS, WhatsApp) — the tool calls each platform's REST endpoint directly using the credentials already in `~/.pace/.env` / `~/.pace/config.yaml`.
 
 ## Editing and Lifecycle
 
 ```bash
-hermes cron list                                    # see all jobs
-hermes cron pause <job_id>                          # stop firing, keep definition
-hermes cron resume <job_id>
-hermes cron edit <job_id> --schedule "every 10m"    # adjust cadence
-hermes cron edit <job_id> --agent                   # flip to LLM mode
-hermes cron edit <job_id> --no-agent --script …     # flip back
-hermes cron remove <job_id>                         # delete it
+pace cron list                                    # see all jobs
+pace cron pause <job_id>                          # stop firing, keep definition
+pace cron resume <job_id>
+pace cron edit <job_id> --schedule "every 10m"    # adjust cadence
+pace cron edit <job_id> --agent                   # flip to LLM mode
+pace cron edit <job_id> --no-agent --script …     # flip back
+pace cron remove <job_id>                         # delete it
 ```
 
 Everything that works on LLM jobs (pause, resume, manual trigger, delivery target changes) works on no-agent jobs too.
@@ -208,7 +208,7 @@ Everything that works on LLM jobs (pause, resume, manual trigger, delivery targe
 ## Worked Example: Disk Space Alert
 
 ```bash
-cat > ~/.hermes/scripts/disk-alert.sh <<'EOF'
+cat > ~/.pace/scripts/disk-alert.sh <<'EOF'
 #!/usr/bin/env bash
 # Alert when / or /home is over 90% full.
 THRESHOLD=90
@@ -218,9 +218,9 @@ df -h / /home 2>/dev/null | awk -v t="$THRESHOLD" '
   }
 '
 EOF
-chmod +x ~/.hermes/scripts/disk-alert.sh
+chmod +x ~/.pace/scripts/disk-alert.sh
 
-hermes cron create "*/15 * * * *" \
+pace cron create "*/15 * * * *" \
   --no-agent \
   --script disk-alert.sh \
   --deliver telegram \

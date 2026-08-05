@@ -14,7 +14,7 @@ Give the agent its own inbox: send and receive email.
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/email/agentmail` |
+| Source | Optional — install with `pace skills install official/email/agentmail` |
 | Path | `optional-skills/email/agentmail` |
 | Version | `1.0.0` |
 | Platforms | linux, macos, windows |
@@ -52,7 +52,7 @@ AgentMail gives the agent its own identity and inbox.
 - Create an account and generate an API key (starts with `am_`)
 
 ### 2. Configure MCP Server
-Add to `~/.hermes/config.yaml` (paste your actual key — MCP env vars are not expanded from .env):
+Add to `~/.pace/config.yaml` (paste your actual key — MCP env vars are not expanded from .env):
 ```yaml
 mcp_servers:
   agentmail:
@@ -64,7 +64,7 @@ mcp_servers:
 
 ### 3. Restart Hermes
 ```bash
-hermes
+pace
 ```
 All 11 AgentMail tools are now available automatically.
 
@@ -88,8 +88,8 @@ All 11 AgentMail tools are now available automatically.
 
 ### Create an inbox and send an email
 1. Create a dedicated inbox:
-   - Use `create_inbox` with a username (e.g. `hermes-agent`)
-   - The agent gets address: `hermes-agent@agentmail.to`
+   - Use `create_inbox` with a username (e.g. `pace-agent`)
+   - The agent gets address: `pace-agent@agentmail.to`
 2. Send an email:
    - Use `send_message` with `inbox_id`, `to`, `subject`, `text`
 3. Check for replies:
@@ -132,7 +132,7 @@ All 11 AgentMail tools are now available automatically.
 ## Verification
 After setup, test with:
 ```
-hermes --toolsets mcp -q "Create an AgentMail inbox called test-agent and tell me its email address"
+pace --toolsets mcp -q "Create an AgentMail inbox called test-agent and tell me its email address"
 ```
 You should see the new inbox address returned.
 

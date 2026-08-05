@@ -25,14 +25,14 @@ Already subscribed? Skip to step 2.
 ## 2. Run the one-shot setup
 
 ```bash
-hermes setup --portal
+pace setup --portal
 ```
 
 This single command does five things:
 
 1. Opens your browser to portal.nousresearch.com for OAuth login
-2. Stores the refresh token at `~/.hermes/auth.json`
-3. Sets `model.provider: nous` in `~/.hermes/config.yaml`
+2. Stores the refresh token at `~/.pace/auth.json`
+3. Sets `model.provider: nous` in `~/.pace/config.yaml`
 4. Picks a default agentic model (`anthropic/claude-sonnet-4.6` or similar)
 5. Turns on the Tool Gateway for web search, image generation, TTS, and browser automation
 
@@ -45,7 +45,7 @@ OAuth needs a browser, but the loopback callback runs on the machine where Herme
 ```bash
 # Option A: SSH port forwarding (preferred)
 ssh -N -L 8642:127.0.0.1:8642 user@remote-host    # in a local terminal
-hermes setup --portal                              # on the remote, open the printed URL in your local browser
+pace setup --portal                              # on the remote, open the printed URL in your local browser
 
 # Option B: device-code login (works from Cloud Shell, Codespaces, EC2 Instance Connect)
 hermes auth add nous --type oauth
@@ -82,7 +82,7 @@ If any line shows something other than "via Nous Portal" or the auth line says "
 ## 4. Run your first conversation
 
 ```bash
-hermes chat
+pace chat
 ```
 
 Try something that exercises both the model and the Tool Gateway:
@@ -115,7 +115,7 @@ Pick a different default permanently:
 
 ```bash
 # in your terminal, outside any session
-hermes config set model.default anthropic/claude-sonnet-4.6
+pace config set model.default anthropic/claude-sonnet-4.6
 ```
 
 ### Don't pick Hermes-4 for agent work
@@ -129,19 +129,19 @@ The Portal's own [info page](https://portal.nousresearch.com/info) carries this 
 The gateway is opt-in per tool, not all-or-nothing. If you already have a Browserbase account and want to keep using it while routing web search and image generation through Nous, that's supported:
 
 ```bash
-hermes tools
+pace tools
 # → Web search       → "Nous Subscription"     (recommended)
 # → Image generation → "Nous Subscription"     (recommended)
 # → Browser          → "Browserbase"           (your existing key)
 # → TTS              → "Nous Subscription"     (recommended)
 ```
 
-These rows appear in `hermes tools` even before you've logged into Nous Portal — if you pick "Nous Subscription" without an active session, Hermes runs the Portal login inline (without changing your inference provider or your other tools).
+These rows appear in `pace tools` even before you've logged into Nous Portal — if you pick "Nous Subscription" without an active session, Hermes runs the Portal login inline (without changing your inference provider or your other tools).
 
 Verify your mix with:
 
 ```bash
-hermes portal tools
+pace portal tools
 ```
 
 You'll see per-tool routing — `via Nous Portal` for the ones routed through the subscription, and the partner name (`browserbase`, `firecrawl`, etc.) for the ones using your own keys.
@@ -174,7 +174,7 @@ The cron job runs unattended, calls the model + web search + summarization all t
 
 If you use [Hermes profiles](/user-guide/profiles) (e.g. a separate config per project), the Portal refresh token is automatically shared across all profiles via a shared token store. Sign in once on any profile, and the rest pick it up automatically.
 
-For team setups where multiple humans share a machine, each human has their own Portal account → each home directory holds its own `~/.hermes/auth.json` → no token sharing across users. This is the right boundary.
+For team setups where multiple humans share a machine, each human has their own Portal account → each home directory holds its own `~/.pace/auth.json` → no token sharing across users. This is the right boundary.
 
 ## Troubleshooting
 
@@ -193,13 +193,13 @@ If your browser doesn't open or the callback fails, you're likely on a remote/he
 Your local config drifted. The OAuth worked but `model.provider` is still pointing at a different provider. Fix:
 
 ```bash
-hermes config set model.provider nous
+pace config set model.provider nous
 ```
 
 Or interactively:
 
 ```bash
-hermes model
+pace model
 # pick Nous Portal
 ```
 
@@ -210,7 +210,7 @@ Re-verify with `hermes portal info`.
 Per-tool config is overriding the gateway. Run:
 
 ```bash
-hermes tools
+pace tools
 # pick "Nous Subscription" for any tool you want gateway-routed
 ```
 
@@ -221,7 +221,7 @@ Some users intentionally mix — e.g. routing web through Nous but using their o
 Your Portal refresh token was invalidated (password change, manual revoke, session expiry). The token is now quarantined locally so Hermes doesn't replay it endlessly. Just log in again:
 
 ```bash
-hermes auth add nous
+pace auth add nous
 ```
 
 The quarantine clears automatically on successful re-login.
@@ -235,7 +235,7 @@ The Portal catalog draws on OpenRouter's model list (300+) plus models served th
 /model openai/o1-2025-12-17
 ```
 
-If a model is genuinely unavailable, [open an issue](https://github.com/NousResearch/hermes-agent/issues) — most gaps are routing config we can update.
+If a model is genuinely unavailable, [open an issue](https://github.com/NousResearch/pace-agent/issues) — most gaps are routing config we can update.
 
 ### Billing not appearing on my Portal account
 

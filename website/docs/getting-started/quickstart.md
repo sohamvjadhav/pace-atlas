@@ -36,11 +36,11 @@ Pick the row that matches your goal:
 
 | Goal | Do this first | Then do this |
 |---|---|---|
-| I just want Hermes working on my machine | `hermes setup` | Run a real chat and verify it responds |
-| I already know my provider | `hermes model` | Save the config, then start chatting |
-| I want a bot or always-on setup | `hermes gateway setup` after CLI works | Connect Telegram, Discord, Slack, or another platform |
-| I want a local or self-hosted model | `hermes model` → custom endpoint | Verify the endpoint, model name, and context length |
-| I want multi-provider fallback | `hermes model` first | Add routing and fallback only after the base chat works |
+| I just want Hermes working on my machine | `pace setup` | Run a real chat and verify it responds |
+| I already know my provider | `pace model` | Save the config, then start chatting |
+| I want a bot or always-on setup | `pace gateway setup` after CLI works | Connect Telegram, Discord, Slack, or another platform |
+| I want a local or self-hosted model | `pace model` → custom endpoint | Verify the endpoint, model name, and context length |
+| I want multi-provider fallback | `pace model` first | Add routing and fallback only after the base chat works |
 
 **Rule of thumb:** if Hermes cannot complete a normal chat, do not add more features yet. Get one clean conversation working first, then layer on gateway, cron, skills, voice, or routing.
 
@@ -79,17 +79,17 @@ For detailed installation options, prerequisites, and troubleshooting, see the [
 
 ## 2. Choose a Provider
 
-The single most important setup step. Use `hermes model` to walk through the choice interactively:
+The single most important setup step. Use `pace model` to walk through the choice interactively:
 
 ```bash
-hermes model
+pace model
 ```
 
 :::tip Easiest path: Nous Portal
 One subscription covers 300+ models plus the [Tool Gateway](../user-guide/features/tool-gateway.md) (web search, image generation, TTS, cloud browser). On a fresh install:
 
 ```bash
-hermes setup --portal
+pace setup --portal
 ```
 
 That logs you in, sets Nous as your provider, and turns on the Tool Gateway in one command.
@@ -109,9 +109,9 @@ Good defaults:
 
 | Provider | What it is | How to set up |
 |----------|-----------|---------------|
-| **Nous Portal** | Subscription-based, zero-config | OAuth login via `hermes model` |
-| **OpenAI Codex** | ChatGPT OAuth, uses Codex models | Device code auth via `hermes model` |
-| **Anthropic** | Claude models directly — Max plan + extra usage credits (OAuth), or API key for pay-per-token | `hermes model` → OAuth login (requires Max + extra credits), or an Anthropic API key |
+| **Nous Portal** | Subscription-based, zero-config | OAuth login via `pace model` |
+| **OpenAI Codex** | ChatGPT OAuth, uses Codex models | Device code auth via `pace model` |
+| **Anthropic** | Claude models directly — Max plan + extra usage credits (OAuth), or API key for pay-per-token | `pace model` → OAuth login (requires Max + extra credits), or an Anthropic API key |
 | **OpenRouter** | Multi-provider routing across many models | Enter your API key |
 | **Fireworks AI** | Direct OpenAI-compatible model API | Set `FIREWORKS_API_KEY` |
 | **Z.AI** | GLM / Zhipu-hosted models | Set `GLM_API_KEY` / `ZAI_API_KEY` (also accepts `Z_AI_API_KEY`) |
@@ -119,7 +119,7 @@ Good defaults:
 | **Kimi / Moonshot China** | China-region Moonshot endpoint | Set `KIMI_CN_API_KEY` |
 | **Arcee AI** | Trinity models | Set `ARCEEAI_API_KEY` |
 | **GMI Cloud** | Multi-model direct API | Set `GMI_API_KEY` |
-| **MiniMax (OAuth)** | MiniMax frontier model via browser OAuth — no API key needed (model name in `hermes_cli/models.py` may change between releases) | `hermes model` → MiniMax (OAuth) |
+| **MiniMax (OAuth)** | MiniMax frontier model via browser OAuth — no API key needed (model name in `pace_cli/models.py` may change between releases) | `pace model` → MiniMax (OAuth) |
 | **MiniMax** | International MiniMax endpoint | Set `MINIMAX_API_KEY` |
 | **MiniMax China** | China-region MiniMax endpoint | Set `MINIMAX_CN_API_KEY` |
 | **Alibaba Cloud** | Qwen models via DashScope | Set `DASHSCOPE_API_KEY` (Qwen Coding Plan also accepts `ALIBABA_CODING_PLAN_API_KEY`) |
@@ -128,14 +128,14 @@ Good defaults:
 | **Azure Foundry** | Azure AI Foundry-hosted models | Set `AZURE_FOUNDRY_API_KEY` + `AZURE_FOUNDRY_BASE_URL` |
 | **Google AI Studio** | Gemini models via direct API | Set `GOOGLE_API_KEY` / `GEMINI_API_KEY` |
 | **xAI** | Grok models via direct API | Set `XAI_API_KEY` |
-| **xAI Grok OAuth** | SuperGrok / Premium+ subscription, no API key needed | `hermes model` → xAI Grok OAuth |
+| **xAI Grok OAuth** | SuperGrok / Premium+ subscription, no API key needed | `pace model` → xAI Grok OAuth |
 | **NovitaAI** | Multi-model API gateway | Set `NOVITA_API_KEY` |
 | **StepFun** | Step Plan models | Set `STEPFUN_API_KEY` |
 | **Xiaomi MiMo** | Xiaomi-hosted models | Set `XIAOMI_API_KEY` |
 | **Tencent TokenHub** | Tencent-hosted models | Set `TOKENHUB_API_KEY` |
 | **Ollama Cloud** | Managed Ollama-hosted models | Set `OLLAMA_API_KEY` |
 | **LM Studio** | Local desktop app exposing an OpenAI-compatible API | Set `LM_API_KEY` (and `LM_BASE_URL` if non-default) |
-| **Qwen OAuth** | Qwen Portal browser OAuth — no API key needed | `hermes model` → Qwen OAuth |
+| **Qwen OAuth** | Qwen Portal browser OAuth — no API key needed | `pace model` → Qwen OAuth |
 | **Kilo Code** | KiloCode-hosted models | Set `KILOCODE_API_KEY` |
 | **OpenCode Zen** | Pay-as-you-go access to curated models | Set `OPENCODE_ZEN_API_KEY` |
 | **OpenCode Go** | $10/month subscription for open models | Set `OPENCODE_GO_API_KEY` |
@@ -153,22 +153,22 @@ Hermes Agent requires a model with at least **64,000 tokens** of context. Models
 :::
 
 :::tip
-You can switch providers at any time with `hermes model` — no lock-in. For a full list of all supported providers and setup details, see [AI Providers](../integrations/providers.md).
+You can switch providers at any time with `pace model` — no lock-in. For a full list of all supported providers and setup details, see [AI Providers](../integrations/providers.md).
 :::
 
 ### How settings are stored
 
 Hermes separates secrets from normal config:
 
-- **Secrets and tokens** → `~/.hermes/.env`
-- **Non-secret settings** → `~/.hermes/config.yaml`
+- **Secrets and tokens** → `~/.pace/.env`
+- **Non-secret settings** → `~/.pace/config.yaml`
 
 The easiest way to set values correctly is through the CLI:
 
 ```bash
-hermes config set model anthropic/claude-opus-4.6
-hermes config set terminal.backend docker
-hermes config set OPENROUTER_API_KEY sk-or-...
+pace config set model anthropic/claude-opus-4.6
+pace config set terminal.backend docker
+pace config set OPENROUTER_API_KEY sk-or-...
 ```
 
 The right value goes to the right file automatically.
@@ -176,14 +176,14 @@ The right value goes to the right file automatically.
 ## 3. Run Your First Chat
 
 ```bash
-hermes            # classic CLI
-hermes --tui      # modern TUI (recommended)
+pace            # classic CLI
+pace --tui      # modern TUI (recommended)
 ```
 
 You'll see a welcome banner with your model, available tools, and skills. Use a prompt that's specific and easy to verify:
 
 :::tip Pick your interface
-Hermes ships with two terminal interfaces: the classic `prompt_toolkit` CLI and a newer [TUI](../user-guide/tui.md) with modal overlays, mouse selection, and non-blocking input. Both share the same sessions, slash commands, and config — try each with `hermes` vs `hermes --tui`.
+Hermes ships with two terminal interfaces: the classic `prompt_toolkit` CLI and a newer [TUI](../user-guide/tui.md) with modal overlays, mouse selection, and non-blocking input. Both share the same sessions, slash commands, and config — try each with `pace` vs `pace --tui`.
 :::
 
 ```
@@ -212,8 +212,8 @@ If that works, you're past the hardest part.
 Before moving on, make sure resume works:
 
 ```bash
-hermes --continue    # Resume the most recent session
-hermes -c            # Short form
+pace --continue    # Resume the most recent session
+pace -c            # Short form
 ```
 
 That should bring you back to the session you just had. If it doesn't, check whether you're in the same profile and whether the session actually saved. This matters later when you're juggling multiple setups or machines.
@@ -255,15 +255,15 @@ Only after the base chat works. Pick what you need:
 ### Bot or shared assistant
 
 ```bash
-hermes gateway setup    # Interactive platform configuration
+pace gateway setup    # Interactive platform configuration
 ```
 
 Connect [Telegram](/user-guide/messaging/telegram), [Discord](/user-guide/messaging/discord), [Slack](/user-guide/messaging/slack), [WhatsApp](/user-guide/messaging/whatsapp), [Signal](/user-guide/messaging/signal), [Email](/user-guide/messaging/email), or [Home Assistant](/user-guide/messaging/homeassistant), or [Microsoft Teams](/user-guide/messaging/teams).
 
 ### Automation and tools
 
-- `hermes tools` — tune tool access per platform
-- `hermes skills` — browse and install reusable workflows
+- `pace tools` — tune tool access per platform
+- `pace skills` — browse and install reusable workflows
 - Cron — only after your bot or CLI setup is stable
 
 ### Sandboxed terminal
@@ -271,8 +271,8 @@ Connect [Telegram](/user-guide/messaging/telegram), [Discord](/user-guide/messag
 For safety, run the agent in a Docker container or on a remote server:
 
 ```bash
-hermes config set terminal.backend docker    # Docker isolation
-hermes config set terminal.backend ssh       # Remote server
+pace config set terminal.backend docker    # Docker isolation
+pace config set terminal.backend ssh       # Remote server
 ```
 
 For Docker sandboxes, you can also enable the **egress credential-injection proxy** so the sandbox never sees your real API keys — only opaque proxy tokens that work exclusively from behind a local TLS-intercepting daemon. See [Egress proxy](../user-guide/egress/iron-proxy.md). Setup is `hermes egress setup && hermes egress start`; `hermes setup terminal` also points Docker users at it. Modal, SSH, Daytona, and Singularity are not wired yet.
@@ -319,7 +319,7 @@ See [Skills System](../user-guide/features/skills.md) for writing your own, exte
 ### MCP servers
 
 ```yaml
-# Add to ~/.hermes/config.yaml
+# Add to ~/.pace/config.yaml
 mcp_servers:
   github:
     command: npx
@@ -333,10 +333,10 @@ mcp_servers:
 ACP support ships with the standard `[all]` extras, so the curl installer already includes it. Just run:
 
 ```bash
-hermes acp
+pace acp
 ```
 
-(If you installed without `[all]`, run `cd ~/.hermes/hermes-agent && uv pip install -e ".[acp]"` first.)
+(If you installed without `[all]`, run `cd ~/.pace/pace-agent && uv pip install -e ".[acp]"` first.)
 
 See [ACP Editor Integration](../user-guide/features/acp.md).
 
@@ -348,23 +348,23 @@ These are the problems that waste the most time:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Hermes opens but gives empty or broken replies | Provider auth or model selection is wrong | Run `hermes model` again and confirm provider, model, and auth |
+| Hermes opens but gives empty or broken replies | Provider auth or model selection is wrong | Run `pace model` again and confirm provider, model, and auth |
 | Custom endpoint "works" but returns garbage | Wrong base URL, model name, or not actually OpenAI-compatible | Verify the endpoint in a separate client first |
-| Gateway starts but nobody can message it | Bot token, allowlist, or platform setup is incomplete | Re-run `hermes gateway setup` and check `hermes gateway status` |
-| `hermes --continue` can't find old session | Switched profiles or session never saved | Check `hermes sessions list` and confirm you're in the right profile |
+| Gateway starts but nobody can message it | Bot token, allowlist, or platform setup is incomplete | Re-run `pace gateway setup` and check `pace gateway status` |
+| `pace --continue` can't find old session | Switched profiles or session never saved | Check `pace sessions list` and confirm you're in the right profile |
 | Model unavailable or odd fallback behavior | Provider routing or fallback settings are too aggressive | Keep routing off until the base provider is stable |
-| `hermes doctor` flags config problems | Config values are missing or stale | Fix the config, retest a plain chat before adding features |
+| `pace doctor` flags config problems | Config values are missing or stale | Fix the config, retest a plain chat before adding features |
 
 ## Recovery Toolkit
 
 When something feels off, use this order:
 
-1. `hermes doctor`
-2. `hermes model`
-3. `hermes setup`
-4. `hermes sessions list`
-5. `hermes --continue`
-6. `hermes gateway status`
+1. `pace doctor`
+2. `pace model`
+3. `pace setup`
+4. `pace sessions list`
+5. `pace --continue`
+6. `pace gateway status`
 
 That sequence gets you from "broken vibes" back to a known state fast.
 
@@ -374,14 +374,14 @@ That sequence gets you from "broken vibes" back to a known state fast.
 
 | Command | Description |
 |---------|-------------|
-| `hermes` | Start chatting |
-| `hermes model` | Choose your LLM provider and model |
-| `hermes tools` | Configure which tools are enabled per platform |
-| `hermes setup` | Full setup wizard (configures everything at once) |
-| `hermes doctor` | Diagnose issues |
-| `hermes update` | Update to latest version |
-| `hermes gateway` | Start the messaging gateway |
-| `hermes --continue` | Resume last session |
+| `pace` | Start chatting |
+| `pace model` | Choose your LLM provider and model |
+| `pace tools` | Configure which tools are enabled per platform |
+| `pace setup` | Full setup wizard (configures everything at once) |
+| `pace doctor` | Diagnose issues |
+| `pace update` | Update to latest version |
+| `pace gateway` | Start the messaging gateway |
+| `pace --continue` | Resume last session |
 
 ## Next Steps
 

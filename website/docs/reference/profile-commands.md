@@ -6,13 +6,13 @@ sidebar_position: 7
 
 This page covers all commands related to [Hermes profiles](../user-guide/profiles.md). For general CLI commands, see [CLI Commands Reference](./cli-commands.md).
 
-## `hermes profile`
+## `pace profile`
 
 ```bash
-hermes profile <subcommand>
+pace profile <subcommand>
 ```
 
-Top-level command for managing profiles. Running `hermes profile` without a subcommand shows help.
+Top-level command for managing profiles. Running `pace profile` without a subcommand shows help.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -30,10 +30,10 @@ Top-level command for managing profiles. Running `hermes profile` without a subc
 | `update` | Re-pull a distribution-managed profile and re-apply its bundle. |
 | `info` | Show distribution metadata for a profile (origin URL, commit, last update). |
 
-## `hermes profile list`
+## `pace profile list`
 
 ```bash
-hermes profile list
+pace profile list
 ```
 
 Lists all profiles. The currently active profile is marked with `*`.
@@ -41,7 +41,7 @@ Lists all profiles. The currently active profile is marked with `*`.
 **Example:**
 
 ```bash
-$ hermes profile list
+$ pace profile list
   default
 * work
   dev
@@ -50,13 +50,13 @@ $ hermes profile list
 
 No options.
 
-## `hermes profile use`
+## `pace profile use`
 
 ```bash
-hermes profile use <name>
+pace profile use <name>
 ```
 
-Sets `<name>` as the active profile. All subsequent `hermes` commands (without `-p`) will use this profile.
+Sets `<name>` as the active profile. All subsequent `pace` commands (without `-p`) will use this profile.
 
 | Argument | Description |
 |----------|-------------|
@@ -65,14 +65,14 @@ Sets `<name>` as the active profile. All subsequent `hermes` commands (without `
 **Example:**
 
 ```bash
-hermes profile use work
-hermes profile use default
+pace profile use work
+pace profile use default
 ```
 
-## `hermes profile create`
+## `pace profile create`
 
 ```bash
-hermes profile create <name> [options]
+pace profile create <name> [options]
 ```
 
 Creates a new profile.
@@ -93,13 +93,13 @@ Creating a profile does **not** make that profile directory the default project/
 
 ```bash
 # Blank profile — needs full setup
-hermes profile create mybot
+pace profile create mybot
 
 # Clone config only from current profile
-hermes profile create work --clone
+pace profile create work --clone
 
 # Clone everything from current profile
-hermes profile create backup --clone-all
+pace profile create backup --clone-all
 
 # Clone config from a specific profile
 hermes profile create work2 --clone-from work
@@ -108,10 +108,10 @@ hermes profile create work2 --clone-from work
 hermes profile create work2-backup --clone-from work --clone-all
 ```
 
-## `hermes profile describe`
+## `pace profile describe`
 
 ```bash
-hermes profile describe [<name>] [options]
+pace profile describe [<name>] [options]
 ```
 
 Read or set a profile's description. The description is consumed by the kanban orchestrator to route tasks based on what each profile is good at, rather than guessing from the profile name alone. Persisted in `<profile_dir>/profile.yaml` so it survives reboots and is shared with the gateway.
@@ -130,22 +130,22 @@ With no flags, prints the current description (or `(no description set for '<nam
 
 ```bash
 # Read the current description
-hermes profile describe researcher
+pace profile describe researcher
 
 # Set it explicitly
-hermes profile describe researcher --text "Reads source code and writes findings."
+pace profile describe researcher --text "Reads source code and writes findings."
 
 # Let the LLM generate one
-hermes profile describe researcher --auto
+pace profile describe researcher --auto
 
 # Fill in descriptions for every profile that doesn't have one
-hermes profile describe --all --auto
+pace profile describe --all --auto
 ```
 
-## `hermes profile delete`
+## `pace profile delete`
 
 ```bash
-hermes profile delete <name> [options]
+pace profile delete <name> [options]
 ```
 
 Deletes a profile and removes its shell alias.
@@ -158,18 +158,18 @@ Deletes a profile and removes its shell alias.
 **Example:**
 
 ```bash
-hermes profile delete mybot
-hermes profile delete mybot --yes
+pace profile delete mybot
+pace profile delete mybot --yes
 ```
 
 :::warning
 This permanently deletes the profile's entire directory including all config, memories, sessions, and skills. The `default` profile (`~/.hermes`) cannot be deleted — use `hermes uninstall` to remove everything.
 :::
 
-## `hermes profile show`
+## `pace profile show`
 
 ```bash
-hermes profile show <name>
+pace profile show <name>
 ```
 
 Displays details about a profile including its home directory, configured model, gateway status, skills count, and configuration file status.
@@ -183,9 +183,9 @@ This shows the profile's Hermes home directory, not the terminal working directo
 **Example:**
 
 ```bash
-$ hermes profile show work
+$ pace profile show work
 Profile: work
-Path:    ~/.hermes/profiles/work
+Path:    ~/.pace/profiles/work
 Model:   anthropic/claude-sonnet-4 (anthropic)
 Gateway: stopped
 Skills:  12
@@ -194,10 +194,10 @@ SOUL.md: exists
 Alias:   ~/.local/bin/work
 ```
 
-## `hermes profile alias`
+## `pace profile alias`
 
 ```bash
-hermes profile alias <name> [options]
+pace profile alias <name> [options]
 ```
 
 Regenerates the shell alias script at `~/.local/bin/<name>`. Useful if the alias was accidentally deleted or if you need to update it after moving your Hermes installation.
@@ -211,20 +211,20 @@ Regenerates the shell alias script at `~/.local/bin/<name>`. Useful if the alias
 **Example:**
 
 ```bash
-hermes profile alias work
+pace profile alias work
 # Creates/updates ~/.local/bin/work
 
-hermes profile alias work --name mywork
+pace profile alias work --name mywork
 # Creates ~/.local/bin/mywork
 
-hermes profile alias work --remove
+pace profile alias work --remove
 # Removes the wrapper script
 ```
 
-## `hermes profile rename`
+## `pace profile rename`
 
 ```bash
-hermes profile rename <old-name> <new-name>
+pace profile rename <old-name> <new-name>
 ```
 
 Renames a profile. Updates the directory and shell alias.
@@ -237,15 +237,15 @@ Renames a profile. Updates the directory and shell alias.
 **Example:**
 
 ```bash
-hermes profile rename mybot assistant
-# ~/.hermes/profiles/mybot → ~/.hermes/profiles/assistant
+pace profile rename mybot assistant
+# ~/.pace/profiles/mybot → ~/.pace/profiles/assistant
 # ~/.local/bin/mybot → ~/.local/bin/assistant
 ```
 
-## `hermes profile export`
+## `pace profile export`
 
 ```bash
-hermes profile export <name> [options]
+pace profile export <name> [options]
 ```
 
 Exports a profile as a compressed tar.gz archive.
@@ -258,16 +258,16 @@ Exports a profile as a compressed tar.gz archive.
 **Example:**
 
 ```bash
-hermes profile export work
+pace profile export work
 # Creates work.tar.gz in the current directory
 
-hermes profile export work -o ./work-2026-03-29.tar.gz
+pace profile export work -o ./work-2026-03-29.tar.gz
 ```
 
-## `hermes profile import`
+## `pace profile import`
 
 ```bash
-hermes profile import <archive> [options]
+pace profile import <archive> [options]
 ```
 
 Imports a profile from a tar.gz archive.
@@ -280,10 +280,10 @@ Imports a profile from a tar.gz archive.
 **Example:**
 
 ```bash
-hermes profile import ./work-2026-03-29.tar.gz
+pace profile import ./work-2026-03-29.tar.gz
 # Infers profile name from the archive
 
-hermes profile import ./work-2026-03-29.tar.gz --name work-restored
+pace profile import ./work-2026-03-29.tar.gz --name work-restored
 ```
 
 ## Distribution commands
@@ -305,16 +305,16 @@ The recipient's user data (memories, sessions, auth, their own edits to
 updates.
 
 :::info
-`hermes profile export` / `import` are still the right commands for
+`pace profile export` / `import` are still the right commands for
 **local backup and restore** of a profile on your own machine. Distribution
 (`install` / `update` / `info`) is a separate concept: ship a profile via
 git so someone else can install it.
 :::
 
-### `hermes profile install`
+### `pace profile install`
 
 ```bash
-hermes profile install <source> [--name <name>] [--alias] [--force] [--yes]
+pace profile install <source> [--name <name>] [--alias] [--force] [--yes]
 ```
 
 Installs a profile distribution from a git URL or a local directory.
@@ -323,7 +323,7 @@ Installs a profile distribution from a git URL or a local directory.
 |--------|-------------|
 | `<source>` | Git URL (`github.com/user/repo`, `https://...`, `git@...`, `ssh://`, `git://`) or a local directory containing `distribution.yaml` at its root. |
 | `--name NAME` | Override the profile name from the manifest. |
-| `--alias` | Also create a shell wrapper (e.g. `telemetry` → `hermes -p telemetry`). |
+| `--alias` | Also create a shell wrapper (e.g. `telemetry` → `pace -p telemetry`). |
 | `--force` | Overwrite an existing profile of the same name. User data is still preserved. |
 | `-y`, `--yes` | Skip the manifest-preview confirmation prompt. |
 
@@ -335,22 +335,22 @@ cron jobs before asking for confirmation. Required env vars go into a
 
 ```bash
 # Install from a GitHub repo (shorthand)
-hermes profile install github.com/kyle/telemetry-distribution --alias
+pace profile install github.com/kyle/telemetry-distribution --alias
 
 # Install from a full HTTPS git URL
-hermes profile install https://github.com/kyle/telemetry-distribution.git
+pace profile install https://github.com/kyle/telemetry-distribution.git
 
 # Install from SSH
-hermes profile install git@github.com:kyle/telemetry-distribution.git
+pace profile install git@github.com:kyle/telemetry-distribution.git
 
 # Install from a local directory during development
-hermes profile install ./telemetry/
+pace profile install ./telemetry/
 ```
 
-### `hermes profile update`
+### `pace profile update`
 
 ```bash
-hermes profile update <name> [--force-config] [--yes]
+pace profile update <name> [--force-config] [--yes]
 ```
 
 Re-clones the distribution from its recorded source and applies updates.
@@ -360,10 +360,10 @@ overwritten; user data (memories, sessions, auth, .env) is never touched.
 `config.yaml` is preserved by default to keep your local overrides.
 Pass `--force-config` to reset it to the distribution's shipped config.
 
-### `hermes profile info`
+### `pace profile info`
 
 ```bash
-hermes profile info <name>
+pace profile info <name>
 ```
 
 Prints the profile's distribution manifest — name, version, required
@@ -373,8 +373,8 @@ the `Installed:` timestamp recorded when the distribution was last
 needs before installing it, and for spotting "this profile was installed
 6 months ago and hasn't been updated."
 
-`hermes profile list` also shows the distribution name and version in a
-`Distribution` column, and `hermes profile show <name>` / `delete <name>`
+`pace profile list` also shows the distribution name and version in a
+`Distribution` column, and `pace profile show <name>` / `delete <name>`
 surface the source URL so you can tell at a glance which profiles came
 from a git repo vs. were created locally.
 
@@ -388,10 +388,10 @@ transparently.
 
 ```bash
 # Uses your SSH key, the same as any other `git clone`
-hermes profile install git@github.com:your-org/internal-assistant.git
+pace profile install git@github.com:your-org/internal-assistant.git
 
 # Uses your git credential helper
-hermes profile install https://github.com/your-org/internal-assistant.git
+pace profile install https://github.com/your-org/internal-assistant.git
 ```
 
 If a clone prompts for credentials interactively in your terminal during
@@ -440,16 +440,16 @@ Authoring a distribution is just a git push:
    and `version`.
 2. Initialize a git repo (or use an existing one) and push to GitHub /
    GitLab / any host Hermes can clone from.
-3. Tell recipients to run `hermes profile install <your-repo-url>`.
+3. Tell recipients to run `pace profile install <your-repo-url>`.
 
 Use git tags for versioned releases — recipients who clone `HEAD` get your
 latest state, and you can always bump `version:` in the manifest.
 
-## `hermes -p` / `hermes --profile`
+## `pace -p` / `pace --profile`
 
 ```bash
-hermes -p <name> <command> [options]
-hermes --profile <name> <command> [options]
+pace -p <name> <command> [options]
+pace --profile <name> <command> [options]
 ```
 
 Global flag to run any Hermes command under a specific profile without changing the sticky default. This overrides the active profile for the duration of the command.
@@ -461,16 +461,16 @@ Global flag to run any Hermes command under a specific profile without changing 
 **Examples:**
 
 ```bash
-hermes -p work chat -q "Check the server status"
-hermes --profile dev gateway start
-hermes -p personal skills list
-hermes -p work config edit
+pace -p work chat -q "Check the server status"
+pace --profile dev gateway start
+pace -p personal skills list
+pace -p work config edit
 ```
 
-## `hermes completion`
+## `pace completion`
 
 ```bash
-hermes completion <shell>
+pace completion <shell>
 ```
 
 Generates shell completion scripts. Includes completions for profile names and profile subcommands.
@@ -483,18 +483,18 @@ Generates shell completion scripts. Includes completions for profile names and p
 
 ```bash
 # Install completions
-hermes completion bash >> ~/.bashrc
-hermes completion zsh >> ~/.zshrc
-hermes completion fish > ~/.config/fish/completions/hermes.fish
+pace completion bash >> ~/.bashrc
+pace completion zsh >> ~/.zshrc
+pace completion fish > ~/.config/fish/completions/pace.fish
 
 # Reload shell
 source ~/.bashrc
 ```
 
 After installation, tab completion works for:
-- `hermes profile <TAB>` — subcommands (list, use, create, etc.)
-- `hermes profile use <TAB>` — profile names
-- `hermes -p <TAB>` — profile names
+- `pace profile <TAB>` — subcommands (list, use, create, etc.)
+- `pace profile use <TAB>` — profile names
+- `pace -p <TAB>` — profile names
 
 ## See also
 

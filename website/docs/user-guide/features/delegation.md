@@ -145,7 +145,7 @@ delivered records are bounded and profile-local.
 You can configure a different model for subagents via `config.yaml` — useful for delegating simple tasks to cheaper/faster models:
 
 ```yaml
-# In ~/.hermes/config.yaml
+# In ~/.pace/config.yaml
 delegation:
   model: "google/gemini-flash-2.0"    # Cheaper model for subagents
   provider: "openrouter"              # Optional: route subagents to a different provider
@@ -349,7 +349,7 @@ For **durable execution** that must survive session closure or process restart, 
 ## Configuration
 
 ```yaml
-# In ~/.hermes/config.yaml
+# In ~/.pace/config.yaml
 delegation:
   max_iterations: 50                        # Max turns per child (default: 50)
   # max_concurrent_children: 3              # Parallel children per batch (default: 3)

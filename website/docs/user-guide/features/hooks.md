@@ -10,7 +10,7 @@ Hermes has four hook systems that run custom code at key lifecycle points:
 
 | System | Registered via | Runs in | Use case |
 |--------|---------------|---------|----------|
-| **[Gateway hooks](#gateway-event-hooks)** | `HOOK.yaml` + `handler.py` in `~/.hermes/hooks/` | Gateway only | Logging, alerts, webhooks |
+| **[Gateway hooks](#gateway-event-hooks)** | `HOOK.yaml` + `handler.py` in `~/.pace/hooks/` | Gateway only | Logging, alerts, webhooks |
 | **[Plugin hooks](#plugin-hooks)** | `ctx.register_hook()` in a [plugin](/user-guide/features/plugins) | CLI + Gateway | Tool interception, metrics, guardrails |
 | **[Shell hooks](#shell-hooks)** | `hooks:` block in `~/.hermes/config.yaml` pointing at shell scripts | CLI + Gateway | Drop-in scripts for blocking, auto-formatting, context injection |
 | **[Outbound webhooks](#outbound-webhooks)** | `hooks.outbound:` list in `~/.hermes/config.yaml` | CLI + Gateway | Push signed lifecycle events to external HTTP endpoints — CI, dashboards, other agents |
@@ -23,10 +23,10 @@ Gateway hooks fire automatically during gateway operation (Telegram, Discord, Sl
 
 ### Creating a Hook
 
-Each hook is a directory under `~/.hermes/hooks/` containing two files:
+Each hook is a directory under `~/.pace/hooks/` containing two files:
 
 ```text
-~/.hermes/hooks/
+~/.pace/hooks/
 └── my-hook/
     ├── HOOK.yaml      # Declares which events to listen for
     └── handler.py     # Python handler function
@@ -52,7 +52,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-LOG_FILE = Path.home() / ".hermes" / "hooks" / "my-hook" / "activity.log"
+LOG_FILE = Path.home() / ".pace" / "hooks" / "my-hook" / "activity.log"
 
 async def handle(event_type: str, context: dict):
     """Called for each subscribed event. Must be named 'handle'."""
@@ -102,7 +102,7 @@ A handler posting a follow-up message into the same Telegram forum topic should 
 Send yourself a message when the agent takes more than 10 steps:
 
 ```yaml
-# ~/.hermes/hooks/long-task-alert/HOOK.yaml
+# ~/.pace/hooks/long-task-alert/HOOK.yaml
 name: long-task-alert
 description: Alert when agent is taking many steps
 events:
@@ -110,7 +110,7 @@ events:
 ```
 
 ```python
-# ~/.hermes/hooks/long-task-alert/handler.py
+# ~/.pace/hooks/long-task-alert/handler.py
 import os
 import httpx
 
@@ -135,7 +135,7 @@ async def handle(event_type: str, context: dict):
 Track which slash commands are used:
 
 ```yaml
-# ~/.hermes/hooks/command-logger/HOOK.yaml
+# ~/.pace/hooks/command-logger/HOOK.yaml
 name: command-logger
 description: Log slash command usage
 events:
@@ -143,12 +143,12 @@ events:
 ```
 
 ```python
-# ~/.hermes/hooks/command-logger/handler.py
+# ~/.pace/hooks/command-logger/handler.py
 import json
 from datetime import datetime
 from pathlib import Path
 
-LOG = Path.home() / ".hermes" / "logs" / "command_usage.jsonl"
+LOG = Path.home() / ".pace" / "logs" / "command_usage.jsonl"
 
 def handle(event_type: str, context: dict):
     LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -168,7 +168,7 @@ def handle(event_type: str, context: dict):
 POST to an external service on new sessions:
 
 ```yaml
-# ~/.hermes/hooks/session-webhook/HOOK.yaml
+# ~/.pace/hooks/session-webhook/HOOK.yaml
 name: session-webhook
 description: Notify external service on new sessions
 events:
@@ -177,7 +177,7 @@ events:
 ```
 
 ```python
-# ~/.hermes/hooks/session-webhook/handler.py
+# ~/.pace/hooks/session-webhook/handler.py
 import httpx
 
 WEBHOOK_URL = "https://your-service.example.com/hermes-events"
@@ -192,19 +192,19 @@ async def handle(event_type: str, context: dict):
 
 ### Tutorial: BOOT.md — Run a Startup Checklist on Every Gateway Boot
 
-A popular pattern from the community: drop a Markdown checklist at `~/.hermes/BOOT.md`, and have the agent run it once every time the gateway starts. Useful for "on every boot, check overnight cron failures and ping me on Discord if anything failed," or "summarize the last 24h of deploy.log and post it to Slack #ops."
+A popular pattern from the community: drop a Markdown checklist at `~/.pace/BOOT.md`, and have the agent run it once every time the gateway starts. Useful for "on every boot, check overnight cron failures and ping me on Discord if anything failed," or "summarize the last 24h of deploy.log and post it to Slack #ops."
 
 This tutorial shows how to build it yourself as a user-defined hook. Hermes does not ship a built-in BOOT.md hook — you wire up exactly the behavior you want.
 
 #### What we're building
 
-1. A file at `~/.hermes/BOOT.md` with natural-language startup instructions.
+1. A file at `~/.pace/BOOT.md` with natural-language startup instructions.
 2. A gateway hook that fires on `gateway:startup`, spawns a one-shot agent with your gateway's resolved model/credentials, and runs the BOOT.md instructions.
 3. A `[SILENT]` convention so the agent can opt out of sending a message when there's nothing to report.
 
 #### Step 1: Write your checklist
 
-Create `~/.hermes/BOOT.md`. Write it as if you were giving instructions to a human assistant:
+Create `~/.pace/BOOT.md`. Write it as if you were giving instructions to a human assistant:
 
 ```markdown
 # Startup Checklist
@@ -220,24 +220,24 @@ The agent sees this as part of its prompt, so anything you can describe in plain
 #### Step 2: Create the hook
 
 ```text
-~/.hermes/hooks/boot-md/
+~/.pace/hooks/boot-md/
 ├── HOOK.yaml
 └── handler.py
 ```
 
-**`~/.hermes/hooks/boot-md/HOOK.yaml`**
+**`~/.pace/hooks/boot-md/HOOK.yaml`**
 
 ```yaml
 name: boot-md
-description: Run ~/.hermes/BOOT.md on gateway startup
+description: Run ~/.pace/BOOT.md on gateway startup
 events:
   - gateway:startup
 ```
 
-**`~/.hermes/hooks/boot-md/handler.py`**
+**`~/.pace/hooks/boot-md/handler.py`**
 
 ```python
-"""Run ~/.hermes/BOOT.md on every gateway startup."""
+"""Run ~/.pace/BOOT.md on every gateway startup."""
 
 import logging
 import threading
@@ -245,7 +245,7 @@ from pathlib import Path
 
 logger = logging.getLogger("hooks.boot-md")
 
-BOOT_FILE = Path.home() / ".hermes" / "BOOT.md"
+BOOT_FILE = Path.home() / ".pace" / "BOOT.md"
 
 
 def _build_prompt(content: str) -> str:
@@ -323,18 +323,18 @@ Without these, a bare `AIAgent()` falls back to built-in defaults and will 401 a
 Restart the gateway:
 
 ```bash
-hermes gateway restart
+pace gateway restart
 ```
 
 Watch the logs:
 
 ```bash
-hermes logs --follow --level INFO | grep boot-md
+pace logs --follow --level INFO | grep boot-md
 ```
 
 You should see `Running BOOT.md (N chars)` followed by either `boot-md completed: ...` (summary of what the agent did) or `boot-md completed (nothing to report)` when the agent replied with an exact silence token such as `[SILENT]`.
 
-Delete `~/.hermes/BOOT.md` to disable the checklist — the hook stays loaded but silently skips when the file isn't there.
+Delete `~/.pace/BOOT.md` to disable the checklist — the hook stays loaded but silently skips when the file isn't there.
 
 #### Extending the pattern
 
@@ -348,7 +348,7 @@ An earlier version of Hermes shipped this as a built-in hook and silently spawne
 
 ### How It Works
 
-1. On gateway startup, `HookRegistry.discover_and_load()` scans `~/.hermes/hooks/`
+1. On gateway startup, `HookRegistry.discover_and_load()` scans `~/.pace/hooks/`
 2. Each subdirectory with `HOOK.yaml` + `handler.py` is loaded dynamically
 3. Handlers are registered for their declared events
 4. At each lifecycle point, `hooks.emit()` fires all matching handlers
@@ -546,7 +546,7 @@ def my_callback(session_id: str, user_message: str, conversation_history: list,
 
 ```python
 # Inject context
-return {"context": "Recalled memories:\n- User likes Python\n- Working on hermes-agent"}
+return {"context": "Recalled memories:\n- User likes Python\n- Working on pace-agent"}
 
 # Plain string (equivalent)
 return "Recalled memories:\n- User likes Python"
@@ -1305,14 +1305,14 @@ Use shell hooks when you want a drop-in, single-file script (Bash, Python, anyth
 - **Inject context into the next LLM turn** — prepend `git status` output, the current weekday, or retrieved documents to the user message (see [`pre_llm_call`](#pre_llm_call)).
 - **Observe lifecycle events** — write a log line when a subagent completes (`subagent_stop`) or a session starts (`on_session_start`).
 
-Shell hooks are registered by calling `agent.shell_hooks.register_from_config(cfg)` at both CLI startup (`hermes_cli/main.py`) and gateway startup (`gateway/run.py`). They compose naturally with Python plugin hooks — both flow through the same dispatcher.
+Shell hooks are registered by calling `agent.shell_hooks.register_from_config(cfg)` at both CLI startup (`pace_cli/main.py`) and gateway startup (`gateway/run.py`). They compose naturally with Python plugin hooks — both flow through the same dispatcher.
 
 ### Comparison at a glance
 
 | Dimension | Shell hooks | [Plugin hooks](#plugin-hooks) | [Gateway hooks](#gateway-event-hooks) |
 |-----------|-------------|-------------------------------|---------------------------------------|
-| Declared in | `hooks:` block in `~/.hermes/config.yaml` | `register()` in a `plugin.yaml` plugin | `HOOK.yaml` + `handler.py` directory |
-| Lives under | `~/.hermes/agent-hooks/` (by convention) | `~/.hermes/plugins/<name>/` | `~/.hermes/hooks/<name>/` |
+| Declared in | `hooks:` block in `~/.pace/config.yaml` | `register()` in a `plugin.yaml` plugin | `HOOK.yaml` + `handler.py` directory |
+| Lives under | `~/.pace/agent-hooks/` (by convention) | `~/.pace/plugins/<name>/` | `~/.pace/hooks/<name>/` |
 | Language | Any (Bash, Python, Go binary, …) | Python only | Python only |
 | Runs in | CLI + Gateway | CLI + Gateway | Gateway only |
 | Events | `VALID_HOOKS` (incl. `subagent_stop`) | `VALID_HOOKS` | Gateway lifecycle (`gateway:startup`, `agent:*`, `command:*`) |
@@ -1378,16 +1378,16 @@ Malformed JSON, non-zero exit codes, and timeouts log a warning but never abort 
 #### 1. Auto-format Python files after every write
 
 ```yaml
-# ~/.hermes/config.yaml
+# ~/.pace/config.yaml
 hooks:
   post_tool_call:
     - matcher: "write_file|patch"
-      command: "~/.hermes/agent-hooks/auto-format.sh"
+      command: "~/.pace/agent-hooks/auto-format.sh"
 ```
 
 ```bash
 #!/usr/bin/env bash
-# ~/.hermes/agent-hooks/auto-format.sh
+# ~/.pace/agent-hooks/auto-format.sh
 payload="$(cat -)"
 path=$(echo "$payload" | jq -r '.tool_input.path // empty')
 [[ "$path" == *.py ]] && command -v black >/dev/null && black "$path" 2>/dev/null
@@ -1402,13 +1402,13 @@ The agent's in-context view of the file is **not** re-read automatically — the
 hooks:
   pre_tool_call:
     - matcher: "terminal"
-      command: "~/.hermes/agent-hooks/block-rm-rf.sh"
+      command: "~/.pace/agent-hooks/block-rm-rf.sh"
       timeout: 5
 ```
 
 ```bash
 #!/usr/bin/env bash
-# ~/.hermes/agent-hooks/block-rm-rf.sh
+# ~/.pace/agent-hooks/block-rm-rf.sh
 payload="$(cat -)"
 cmd=$(echo "$payload" | jq -r '.tool_input.command // empty')
 if echo "$cmd" | grep -qE 'rm[[:space:]]+-rf?[[:space:]]+/'; then
@@ -1423,12 +1423,12 @@ fi
 ```yaml
 hooks:
   pre_llm_call:
-    - command: "~/.hermes/agent-hooks/inject-cwd-context.sh"
+    - command: "~/.pace/agent-hooks/inject-cwd-context.sh"
 ```
 
 ```bash
 #!/usr/bin/env bash
-# ~/.hermes/agent-hooks/inject-cwd-context.sh
+# ~/.pace/agent-hooks/inject-cwd-context.sh
 cat - >/dev/null   # discard stdin payload
 if status=$(git status --porcelain 2>/dev/null) && [[ -n "$status" ]]; then
   jq --null-input --arg s "$status" \
@@ -1445,30 +1445,30 @@ Claude Code's `UserPromptSubmit` event is intentionally not a separate Hermes ev
 ```yaml
 hooks:
   subagent_stop:
-    - command: "~/.hermes/agent-hooks/log-orchestration.sh"
+    - command: "~/.pace/agent-hooks/log-orchestration.sh"
 ```
 
 ```bash
 #!/usr/bin/env bash
-# ~/.hermes/agent-hooks/log-orchestration.sh
-log=~/.hermes/logs/orchestration.log
+# ~/.pace/agent-hooks/log-orchestration.sh
+log=~/.pace/logs/orchestration.log
 jq -c '{ts: now, parent: .session_id, extra: .extra}' < /dev/stdin >> "$log"
 printf '{}\n'
 ```
 
 ### Consent model
 
-Each unique `(event, command)` pair prompts the user for approval the first time Hermes sees it, then persists the decision to `~/.hermes/shell-hooks-allowlist.json`. Subsequent runs (CLI or gateway) skip the prompt.
+Each unique `(event, command)` pair prompts the user for approval the first time Hermes sees it, then persists the decision to `~/.pace/shell-hooks-allowlist.json`. Subsequent runs (CLI or gateway) skip the prompt.
 
 Three escape hatches bypass the interactive prompt — any one is sufficient:
 
-1. `--accept-hooks` flag on the CLI (e.g. `hermes --accept-hooks chat`)
+1. `--accept-hooks` flag on the CLI (e.g. `pace --accept-hooks chat`)
 2. `HERMES_ACCEPT_HOOKS=1` environment variable
 3. `hooks_auto_accept: true` in `~/.hermes/config.yaml`
 
 Non-TTY runs (gateway, cron, CI) need one of these three — otherwise any newly-added hook silently stays un-registered and logs a warning.
 
-**Script edits are silently trusted.** The allowlist keys on the exact command string, not the script's hash, so editing the script on disk does not invalidate consent. `hermes hooks doctor` flags mtime drift so you can spot edits and decide whether to re-approve.
+**Script edits are silently trusted.** The allowlist keys on the exact command string, not the script's hash, so editing the script on disk does not invalidate consent. `pace hooks doctor` flags mtime drift so you can spot edits and decide whether to re-approve.
 
 #### Manual allowlisting
 
@@ -1491,18 +1491,18 @@ The command string must match the configured hook command exactly. A path-keyed 
 
 | Command | What it does |
 |---------|--------------|
-| `hermes hooks list` | Dump configured hooks with matcher, timeout, and consent status |
-| `hermes hooks test <event> [--for-tool X] [--payload-file F]` | Fire every matching hook against a synthetic payload and print the parsed response |
-| `hermes hooks revoke <command>` | Remove every allowlist entry matching `<command>` (takes effect on next restart) |
-| `hermes hooks doctor` | For every configured hook: check exec bit, allowlist status, mtime drift, JSON output validity, and rough execution time |
+| `pace hooks list` | Dump configured hooks with matcher, timeout, and consent status |
+| `pace hooks test <event> [--for-tool X] [--payload-file F]` | Fire every matching hook against a synthetic payload and print the parsed response |
+| `pace hooks revoke <command>` | Remove every allowlist entry matching `<command>` (takes effect on next restart) |
+| `pace hooks doctor` | For every configured hook: check exec bit, allowlist status, mtime drift, JSON output validity, and rough execution time |
 
 ### Security
 
 Shell hooks run with **your full user credentials** — same trust boundary as a cron entry or a shell alias. Treat the `hooks:` block in `config.yaml` as privileged configuration:
 
 - Only reference scripts you wrote or fully reviewed.
-- Keep scripts inside `~/.hermes/agent-hooks/` so the path is easy to audit.
-- Re-run `hermes hooks doctor` after you pull a shared config to spot newly-added hooks before they register.
+- Keep scripts inside `~/.pace/agent-hooks/` so the path is easy to audit.
+- Re-run `pace hooks doctor` after you pull a shared config to spot newly-added hooks before they register.
 - If your config.yaml is version-controlled across a team, review PRs that change the `hooks:` section the same way you'd review CI config.
 
 ### Ordering and precedence

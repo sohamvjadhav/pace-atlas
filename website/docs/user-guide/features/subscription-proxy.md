@@ -33,13 +33,13 @@ hermes portal
 ```
 
 This opens your browser for the Nous Portal OAuth flow. Hermes stores
-the refresh token in `~/.hermes/auth.json` — the same place all Hermes
+the refresh token in `~/.pace/auth.json` — the same place all Hermes
 provider logins live.
 
 ### 2. Start the proxy
 
 ```bash
-hermes proxy start
+pace proxy start
 ```
 
 ```
@@ -69,17 +69,17 @@ automatically when the bearer approaches expiry.
 ## Available providers
 
 ```bash
-hermes proxy providers
+pace proxy providers
 ```
 
 Currently shipped: `nous` (Nous Portal) and `xai` (xAI / Grok). More
 OAuth providers can be added by implementing the `UpstreamAdapter`
-interface in `hermes_cli/proxy/adapters/`.
+interface in `pace_cli/proxy/adapters/`.
 
 ## Check status
 
 ```bash
-hermes proxy status
+pace proxy status
 ```
 
 ```
@@ -133,7 +133,7 @@ Then start your proxy in a terminal alongside `openviking-server`:
 
 ```bash
 # Terminal 1
-hermes proxy start
+pace proxy start
 
 # Terminal 2
 openviking-server
@@ -165,7 +165,7 @@ By default the proxy binds `127.0.0.1` (localhost only). To let other
 machines on your network use it:
 
 ```bash
-hermes proxy start --host 0.0.0.0 --port 8645
+pace proxy start --host 0.0.0.0 --port 8645
 ```
 
 ⚠ **Be aware:** anyone on your network can now use your Portal
@@ -197,7 +197,7 @@ proxy is a credential-attaching pass-through.
 The adapter system is pluggable. Adding a new provider (e.g.
 HuggingFace, GitHub Copilot's chat endpoint, Anthropic via OAuth)
 requires implementing `UpstreamAdapter` in
-`hermes_cli/proxy/adapters/<provider>.py` and registering it in
+`pace_cli/proxy/adapters/<provider>.py` and registering it in
 `adapters/__init__.py`. Providers that aren't OpenAI-compatible at the
 protocol level (Anthropic Messages API, for example) would need a
 transformation layer, which is out of scope for the current shape.

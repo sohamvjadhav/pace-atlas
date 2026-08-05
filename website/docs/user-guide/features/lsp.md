@@ -119,21 +119,21 @@ A few servers are installed alongside a peer dependency that npm
 won't auto-pull. The current case is `typescript-language-server`,
 which requires the `typescript` SDK importable from the same
 `node_modules` tree — Hermes installs both packages together when you
-run `hermes lsp install typescript` or auto-install fires on first
+run `pace lsp install typescript` or auto-install fires on first
 use.
 
 ## CLI
 
 ```
-hermes lsp status          # service state + per-server install status
-hermes lsp list            # registry, optionally --installed-only
-hermes lsp install <id>    # eagerly install one server
-hermes lsp install-all     # try every server with a known recipe
-hermes lsp restart         # tear down running clients
-hermes lsp which <id>      # print resolved binary path
+pace lsp status          # service state + per-server install status
+pace lsp list            # registry, optionally --installed-only
+pace lsp install <id>    # eagerly install one server
+pace lsp install-all     # try every server with a known recipe
+pace lsp restart         # tear down running clients
+pace lsp which <id>      # print resolved binary path
 ```
 
-`hermes lsp status` is the best starting point — it shows which
+`pace lsp status` is the best starting point — it shows which
 languages will get semantic diagnostics today and which need a
 binary installed.
 
@@ -255,19 +255,19 @@ lsp:
 
 ## Troubleshooting
 
-**`hermes lsp status` shows a server as "missing"**
+**`pace lsp status` shows a server as "missing"**
 
 The binary isn't on PATH and isn't in `<HERMES_HOME>/lsp/bin/`. Run
-`hermes lsp install <server_id>` to attempt an auto-install, or
+`pace lsp install <server_id>` to attempt an auto-install, or
 install the binary manually through the language's normal toolchain.
 
-**`Backend warnings` section in `hermes lsp status`**
+**`Backend warnings` section in `pace lsp status`**
 
 Some servers ship as thin wrappers around an external CLI for actual
 diagnostics — they spawn cleanly and accept requests but never emit
 errors when the sidecar binary is missing. The most common case is
 `bash-language-server`, which delegates diagnostics to `shellcheck`.
-When `hermes lsp status` shows a `Backend warnings` section, install
+When `pace lsp status` shows a `Backend warnings` section, install
 the named tool through your OS package manager:
 
 ```
@@ -277,11 +277,11 @@ scoop install shellcheck    # Windows
 ```
 
 The same warning is logged once at server spawn time in
-`~/.hermes/logs/agent.log`.
+`~/.pace/logs/agent.log`.
 
 **Server starts but never returns diagnostics**
 
-Check `~/.hermes/logs/agent.log` for `[agent.lsp.client]` entries —
+Check `~/.pace/logs/agent.log` for `[agent.lsp.client]` entries —
 both stderr from the language server and protocol errors land
 there. Some servers (rust-analyzer especially) need to finish a
 project-wide index before they emit per-file diagnostics; the first
@@ -291,7 +291,7 @@ subsequent edits picking them up.
 **Server crashed**
 
 A crashed server is added to the broken-set and won't be retried for
-the rest of the session. Run `hermes lsp restart` to clear the set;
+the rest of the session. Run `pace lsp restart` to clear the set;
 the next edit re-spawns.
 
 **Editing a file outside any git repo**

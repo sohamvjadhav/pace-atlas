@@ -3,15 +3,15 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'Hermes Agent',
-  tagline: 'The self-improving AI agent',
+  title: 'PACE Atlas',
+  tagline: 'The server agent that watches your infrastructure',
   favicon: 'img/favicon.ico',
 
-  url: 'https://hermes-agent.nousresearch.com',
+  url: 'https://sohamvjadhav.github.io/pace-atlas',
   baseUrl: '/docs/',
 
-  organizationName: 'NousResearch',
-  projectName: 'hermes-agent',
+  organizationName: 'sohamvjadhav',
+  projectName: 'pace-atlas',
 
   onBrokenLinks: 'warn',
 
@@ -114,7 +114,7 @@ const config: Config = {
         docs: {
           routeBasePath: '/',  // Docs at the root of /docs/
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/NousResearch/hermes-agent/edit/main/website/',
+          editUrl: 'https://github.com/sohamvjadhav/pace-atlas/edit/main/website/',
         },
         blog: false,
         theme: {
@@ -125,7 +125,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/hermes-agent-banner.png',
+    image: 'img/pace-atlas-banner.png',
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: true,
@@ -137,9 +137,9 @@ const config: Config = {
       },
     },
     navbar: {
-      title: 'Hermes Agent',
+      title: 'PACE Atlas',
       logo: {
-        alt: 'Hermes Agent',
+        alt: 'PACE Atlas',
         src: 'img/logo.png',
       },
       items: [
@@ -164,12 +164,12 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://hermes-agent.nousresearch.com',
+          href: 'https://sohamvjadhav.github.io/pace-atlas',
           label: 'Home',
           position: 'right',
         },
         {
-          href: 'https://github.com/NousResearch/hermes-agent',
+          href: 'https://github.com/sohamvjadhav/pace-atlas',
           label: 'GitHub',
           position: 'right',
         },

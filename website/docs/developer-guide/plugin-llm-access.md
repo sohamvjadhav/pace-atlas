@@ -188,7 +188,7 @@ def _paste_to_tasks(ctx, raw_args: str) -> str:
 A third worked example, this time with image input, lives in the
 [`hermes-example-plugins`](https://github.com/NousResearch/hermes-example-plugins/tree/main/plugin-llm-example)
 repo (companion repo for reference plugins — not bundled with
-hermes-agent itself). For the async surface (`acomplete()` /
+pace-agent itself). For the async surface (`acomplete()` /
 `acomplete_structured()` with `asyncio.gather()`), see
 [`plugin-llm-async-example`](https://github.com/NousResearch/hermes-example-plugins/tree/main/plugin-llm-async-example)
 in the same repo.
@@ -338,7 +338,7 @@ plugins:
       llm:
         # Allow this plugin to choose a different Hermes provider
         # (must be one Hermes already knows about — same names as
-        # `hermes model` and config.yaml model.provider).
+        # `pace model` and config.yaml model.provider).
         allow_provider_override: true
 
         # Optionally restrict which providers. Use ["*"] for any.
@@ -403,7 +403,7 @@ don't have to:
 * **Provider resolution.** Reads `model.provider` + `model.model`
   from the user's config (or the explicit overrides when trusted).
 * **Auth.** Pulls API keys, OAuth tokens, or refresh tokens from
-  `~/.hermes/auth.json` / env, including the credential pool when
+  `~/.pace/auth.json` / env, including the credential pool when
   one is configured. The plugin never sees them.
 * **Vision routing.** When image input is supplied and the user's
   active text model is text-only, the host falls back to the
@@ -457,8 +457,8 @@ own model call — for any reason, structured or not — `ctx.llm`.
 
 ## Reference
 
-* Implementation: [`agent/plugin_llm.py`](https://github.com/NousResearch/hermes-agent/blob/main/agent/plugin_llm.py)
-* Tests: [`tests/agent/test_plugin_llm.py`](https://github.com/NousResearch/hermes-agent/blob/main/tests/agent/test_plugin_llm.py)
+* Implementation: [`agent/plugin_llm.py`](https://github.com/NousResearch/pace-agent/blob/main/agent/plugin_llm.py)
+* Tests: [`tests/agent/test_plugin_llm.py`](https://github.com/NousResearch/pace-agent/blob/main/tests/agent/test_plugin_llm.py)
 * Reference plugins (companion repo):
   * [`plugin-llm-example`](https://github.com/NousResearch/hermes-example-plugins/tree/main/plugin-llm-example) — sync structured extraction with image input
   * [`plugin-llm-async-example`](https://github.com/NousResearch/hermes-example-plugins/tree/main/plugin-llm-async-example) — async with `asyncio.gather()`

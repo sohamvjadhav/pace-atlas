@@ -54,7 +54,7 @@ platforms: [macos, linux]          # Optional — restrict to specific OS platfo
                                    #   Valid: macos, linux, windows
                                    #   Omit to load on all platforms (default)
 metadata:
-  hermes:
+  pace:
     tags: [Category, Subcategory, Keywords]
     related_skills: [other-skill-name]
     requires_toolsets: [web]            # Optional — only show when these toolsets are active
@@ -116,7 +116,7 @@ Skills can declare dependencies on specific tools or toolsets. This controls whe
 
 ```yaml
 metadata:
-  hermes:
+  pace:
     requires_toolsets: [web]           # Hide if the web toolset is NOT active
     requires_tools: [web_search]       # Hide if web_search tool is NOT available
     fallback_for_toolsets: [browser]   # Hide if the browser toolset IS active
@@ -189,7 +189,7 @@ Skills can declare non-secret settings that are stored in `config.yaml` under th
 
 ```yaml
 metadata:
-  hermes:
+  pace:
     config:
       - key: myplugin.path
         description: Path to the plugin data directory
@@ -205,7 +205,7 @@ Each entry supports:
 - `key` (required) — dotpath for the setting (e.g., `myplugin.path`)
 - `description` (required) — explains what the setting controls
 - `default` (optional) — default value if the user doesn't configure it
-- `prompt` (optional) — prompt text shown during `hermes config migrate`; falls back to `description`
+- `prompt` (optional) — prompt text shown during `pace config migrate`; falls back to `description`
 
 **How it works:**
 
@@ -217,11 +217,11 @@ Each entry supports:
          path: ~/my-data
    ```
 
-2. **Discovery:** `hermes config migrate` scans all enabled skills, finds unconfigured settings, and prompts the user. Settings also appear in `hermes config show` under "Skill Settings."
+2. **Discovery:** `pace config migrate` scans all enabled skills, finds unconfigured settings, and prompts the user. Settings also appear in `pace config show` under "Skill Settings."
 
 3. **Runtime injection:** When a skill loads, its config values are resolved and appended to the skill message:
    ```
-   [Skill config (from ~/.hermes/config.yaml):
+   [Skill config (from ~/.pace/config.yaml):
      myplugin.path = /home/user/my-data
    ]
    ```
@@ -229,11 +229,11 @@ Each entry supports:
 
 4. **Manual setup:** Users can also set values directly:
    ```bash
-   hermes config set skills.config.myplugin.path ~/my-data
+   pace config set skills.config.myplugin.path ~/my-data
    ```
 
 :::tip When to use which
-Use `required_environment_variables` for API keys, tokens, and other **secrets** (stored in `~/.hermes/.env`, never shown to the model). Use `config` for **paths, preferences, and non-sensitive settings** (stored in `config.yaml`, visible in config show).
+Use `required_environment_variables` for API keys, tokens, and other **secrets** (stored in `~/.pace/.env`, never shown to the model). Use `config` for **paths, preferences, and non-sensitive settings** (stored in `config.yaml`, visible in config show).
 :::
 
 ### Credential File Requirements (OAuth tokens, etc.)
@@ -249,7 +249,7 @@ required_credential_files:
 ```
 
 Each entry supports:
-- `path` (required) — file path relative to `~/.hermes/`
+- `path` (required) — file path relative to `~/.pace/`
 - `description` (optional) — explains what the file is and how it's created
 
 When loaded, Hermes checks if these files exist. Missing files trigger `setup_needed`. Existing files are automatically:
@@ -258,7 +258,7 @@ When loaded, Hermes checks if these files exist. Missing files trigger `setup_ne
 - Available on **local** backend without any special handling
 
 :::tip When to use which
-Use `required_environment_variables` for simple API keys and tokens (strings stored in `~/.hermes/.env`). Use `required_credential_files` for OAuth token files, client secrets, service account JSON, certificates, or any credential that's a file on disk.
+Use `required_environment_variables` for simple API keys and tokens (strings stored in `~/.pace/.env`). Use `required_credential_files` for OAuth token files, client secrets, service account JSON, certificates, or any credential that's a file on disk.
 :::
 
 See the `skills/productivity/google-workspace/SKILL.md` for a complete example using both.
@@ -325,7 +325,7 @@ Snippets run with the skill directory as their working directory, and output is 
 Run the skill and verify the agent follows the instructions correctly:
 
 ```bash
-hermes chat --toolsets skills -q "Use the X skill to do Y"
+pace chat --toolsets skills -q "Use the X skill to do Y"
 ```
 
 ## Where Should the Skill Live?
@@ -335,9 +335,9 @@ Bundled skills (in `skills/`) ship with every Hermes install. They should be **b
 - Document handling, web research, common dev workflows, system administration
 - Used regularly by a wide range of people
 
-If your skill is official and useful but not universally needed (e.g., a paid service integration, a heavyweight dependency), put it in **`optional-skills/`** — it ships with the repo, is discoverable via `hermes skills browse` (labeled "official"), and installs with built-in trust.
+If your skill is official and useful but not universally needed (e.g., a paid service integration, a heavyweight dependency), put it in **`optional-skills/`** — it ships with the repo, is discoverable via `pace skills browse` (labeled "official"), and installs with built-in trust.
 
-If your skill is specialized, community-contributed, or niche, it's better suited for a **Skills Hub** — upload it to a registry and share it via `hermes skills install`.
+If your skill is specialized, community-contributed, or niche, it's better suited for a **Skills Hub** — upload it to a registry and share it via `pace skills install`.
 
 ## Blueprints: skills that are also automations
 
@@ -402,7 +402,7 @@ The **important-mail monitor** catalog entry is the poll→classify→surface pa
 ### To the Skills Hub
 
 ```bash
-hermes skills publish skills/my-skill --to github --repo owner/repo
+pace skills publish skills/my-skill --to github --repo owner/repo
 ```
 
 ### To a Custom Repository
@@ -410,7 +410,7 @@ hermes skills publish skills/my-skill --to github --repo owner/repo
 Add your repo as a tap:
 
 ```bash
-hermes skills tap add owner/repo
+pace skills tap add owner/repo
 ```
 
 Users can then search and install from your repository.

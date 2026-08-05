@@ -45,7 +45,7 @@ Before touching voice mode, verify that:
 - the agent can answer text prompts normally
 
 ```bash
-hermes
+pace
 ```
 
 Ask something simple:
@@ -124,7 +124,7 @@ This is usually the best place to start.
 
 ### Environment file example
 
-Add to `~/.hermes/.env`:
+Add to `~/.pace/.env`:
 
 ```bash
 # Cloud STT options (local needs no key)
@@ -151,7 +151,7 @@ ELEVENLABS_API_KEY=***
 - `openai` → good middle ground
 - `mistral` → multilingual, native Opus
 
-### If you use `hermes setup`
+### If you use `pace setup`
 
 If you choose NeuTTS in the setup wizard, Hermes checks whether `neutts` is already installed. If it is missing, the wizard tells you NeuTTS needs the Python package `neutts` and the system package `espeak-ng`, offers to install them for you, installs `espeak-ng` with your platform package manager, and then runs:
 
@@ -204,7 +204,7 @@ tts:
 Start Hermes:
 
 ```bash
-hermes
+pace
 ```
 
 Inside the CLI:
@@ -302,7 +302,7 @@ Hermes stays a normal chat bot, but can speak replies.
 ### Start the gateway
 
 ```bash
-hermes gateway
+pace gateway
 ```
 
 ### Turn on voice replies

@@ -14,7 +14,7 @@ Hermes supports two WeCom integration modes:
 
 See also: [WeCom Bot](./wecom.md) for the bot-style integration.
 
-> Run `hermes gateway setup` and pick **WeCom Callback** for a guided walk-through.
+> Run `pace gateway setup` and pick **WeCom Callback** for a guided walk-through.
 
 ## How It Works
 
@@ -64,10 +64,10 @@ WECOM_CALLBACK_ALLOWED_USERS=user1,user2
 ### 3. Start the Gateway
 
 ```bash
-hermes gateway
+pace gateway
 ```
 
-(Use `hermes gateway start` only after `hermes gateway install` has registered the systemd/launchd service.)
+(Use `pace gateway start` only after `pace gateway install` has registered the systemd/launchd service.)
 
 The callback adapter starts an HTTP server on the configured port. WeCom will verify the callback URL via a GET request, then begin sending messages via POST.
 
@@ -159,8 +159,8 @@ WeCom signs every request with the **Token** you registered in the admin
 console. A mismatch between the token configured in Hermes and the token the
 admin console expects is the most common cause. Re-copy both the **Token** and
 **EncodingAESKey** from the admin console — they're easy to truncate. Whitespace
-in `~/.hermes/.env` values around `=` will also break signature checks. After
-fixing, restart `hermes gateway run`.
+in `~/.pace/.env` values around `=` will also break signature checks. After
+fixing, restart `pace gateway run`.
 
 **Callback URL not reachable / verification step fails.**
 WeCom hits the public URL you registered. Confirm:
@@ -171,7 +171,7 @@ WeCom hits the public URL you registered. Confirm:
    it just means the listener is reachable).
 
 **Port not reachable / listener not bound.**
-Check `hermes gateway run` logs for the bound host/port. If the adapter bound to
+Check `pace gateway run` logs for the bound host/port. If the adapter bound to
 `127.0.0.1` you must front it with a reverse proxy or tunnel — WeCom's servers
 can't reach loopback. Leave `extra.host` unset so the default dual-stack
 bind (all interfaces, IPv4+IPv6) applies, or pin an interface in `config.yaml` (plus

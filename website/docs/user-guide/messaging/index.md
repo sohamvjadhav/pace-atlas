@@ -8,7 +8,7 @@ description: "Chat with Hermes from Telegram, Discord, Slack, WhatsApp, Signal, 
 
 Chat with Hermes from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, Home Assistant, Mattermost, Matrix, DingTalk, Feishu/Lark, WeCom, Weixin, BlueBubbles (iMessage), QQ, Yuanbao, Microsoft Teams, LINE, ntfy, or your browser. The gateway is a single background process that connects to all your configured platforms, handles sessions, runs cron jobs, and delivers voice messages.
 
-For the full voice feature set — including CLI microphone mode, spoken replies in messaging, and Discord voice-channel conversations — see [Voice Mode](/user-guide/features/voice-mode) and [Use Voice Mode with Hermes](/guides/use-voice-mode-with-hermes).
+For the full voice feature set — including CLI microphone mode, spoken replies in messaging, and Discord voice-channel conversations — see [Voice Mode](/user-guide/features/voice-mode) and [Use Voice Mode with Hermes](/guides/use-voice-mode-with-pace).
 
 :::tip
 Bots need both a model provider and tool providers (TTS, web). A [Nous Portal](/integrations/nous-portal) subscription bundles all of them.
@@ -144,7 +144,7 @@ Failed turns still surface as errors; Hermes does not hide failures just because
 The easiest way to configure messaging platforms is the interactive wizard:
 
 ```bash
-hermes gateway setup        # Interactive setup for all messaging platforms
+pace gateway setup        # Interactive setup for all messaging platforms
 ```
 
 This walks you through configuring each platform with arrow-key selection, shows which platforms are already configured, and offers to start/restart the gateway when done.
@@ -152,14 +152,14 @@ This walks you through configuring each platform with arrow-key selection, shows
 ## Gateway Commands
 
 ```bash
-hermes gateway              # Run in foreground
-hermes gateway setup        # Configure messaging platforms interactively
-hermes gateway install      # Install as a user service (Linux) / launchd service (macOS)
-sudo hermes gateway install --system   # Linux only: install a boot-time system service
-hermes gateway start        # Start the default service
-hermes gateway stop         # Stop the default service
-hermes gateway status       # Check default service status
-hermes gateway status --system         # Linux only: inspect the system service explicitly
+pace gateway              # Run in foreground
+pace gateway setup        # Configure messaging platforms interactively
+pace gateway install      # Install as a user service (Linux) / launchd service (macOS)
+sudo pace gateway install --system   # Linux only: install a boot-time system service
+pace gateway start        # Start the default service
+pace gateway stop         # Stop the default service
+pace gateway status       # Check default service status
+pace gateway status --system         # Linux only: inspect the system service explicitly
 ```
 
 ### Optional Linux event-loop watchdog
@@ -280,7 +280,7 @@ guard. Set it to `0` to disable the cutoff (any live process blocks reset, the
 old behavior), or raise it if you run legitimate multi-day jobs whose liveness
 should keep the conversation open.
 
-Configure per-platform overrides in `~/.hermes/gateway.json`:
+Configure per-platform overrides in `~/.pace/gateway.json`:
 
 ```json
 {
@@ -348,11 +348,11 @@ Instead of manually configuring user IDs, unknown users receive a one-time pairi
 ```bash
 # The user sees: "Pairing code: XKGH5N7P"
 # You approve them with:
-hermes pairing approve telegram XKGH5N7P
+pace pairing approve telegram XKGH5N7P
 
 # Other pairing commands:
-hermes pairing list          # View pending + approved users
-hermes pairing revoke telegram 123456789  # Remove access
+pace pairing list          # View pending + approved users
+pace pairing revoke telegram 123456789  # Remove access
 ```
 
 Pairing codes expire after 1 hour, are rate-limited, and use cryptographic randomness.
@@ -430,7 +430,7 @@ Single-select prompts behave as before: pick one option by number, button, or te
 
 ## Tool Progress Notifications
 
-Control how much tool activity is displayed in `~/.hermes/config.yaml`:
+Control how much tool activity is displayed in `~/.pace/config.yaml`:
 
 ```yaml
 display:
@@ -516,7 +516,7 @@ Each `/background` prompt spawns a **separate agent instance** that runs asynchr
 
 ### Background Process Notifications
 
-When the agent running a background session uses `terminal(background=true)` to start long-running processes (servers, builds, etc.), the gateway can push status updates to your chat. Control this with `display.background_process_notifications` in `~/.hermes/config.yaml`:
+When the agent running a background session uses `terminal(background=true)` to start long-running processes (servers, builds, etc.), the gateway can push status updates to your chat. Control this with `display.background_process_notifications` in `~/.pace/config.yaml`:
 
 ```yaml
 display:
@@ -552,19 +552,19 @@ Background tasks on messaging platforms are fire-and-forget — you don't need t
 ### Linux (systemd)
 
 ```bash
-hermes gateway install               # Install as user service
-hermes gateway start                 # Start the service
-hermes gateway stop                  # Stop the service
-hermes gateway status                # Check status
+pace gateway install               # Install as user service
+pace gateway start                 # Start the service
+pace gateway stop                  # Stop the service
+pace gateway status                # Check status
 journalctl --user -u hermes-gateway -f  # View logs
 
 # Enable lingering (keeps running after logout)
 sudo loginctl enable-linger $USER
 
 # Or install a boot-time system service that still runs as your user
-sudo hermes gateway install --system
-sudo hermes gateway start --system
-sudo hermes gateway status --system
+sudo pace gateway install --system
+sudo pace gateway start --system
+sudo pace gateway status --system
 journalctl -u hermes-gateway -f
 ```
 
@@ -594,31 +594,31 @@ hermes ALL=(root) NOPASSWD: /usr/bin/systemctl --no-ask-password reset-failed he
 Avoid keeping both the user and system gateway units installed at once unless you really mean to. Hermes will warn if it detects both because start/stop/status behavior gets ambiguous.
 
 :::info Multiple installations
-If you run multiple Hermes installations on the same machine (with different `HERMES_HOME` directories), each gets its own systemd service name. The default `~/.hermes` uses `hermes-gateway`; other installations use `hermes-gateway-<hash>`. The `hermes gateway` commands automatically target the correct service for your current `HERMES_HOME`.
+If you run multiple Hermes installations on the same machine (with different `HERMES_HOME` directories), each gets its own systemd service name. The default `~/.pace` uses `hermes-gateway`; other installations use `hermes-gateway-<hash>`. The `pace gateway` commands automatically target the correct service for your current `HERMES_HOME`.
 :::
 
 ### macOS (launchd)
 
 ```bash
-hermes gateway install               # Install as launchd agent
-hermes gateway start                 # Start the service
-hermes gateway stop                  # Stop the service
-hermes gateway status                # Check status
-tail -f ~/.hermes/logs/gateway.log   # View logs
+pace gateway install               # Install as launchd agent
+pace gateway start                 # Start the service
+pace gateway stop                  # Stop the service
+pace gateway status                # Check status
+tail -f ~/.pace/logs/gateway.log   # View logs
 ```
 
-The generated plist lives at `~/Library/LaunchAgents/ai.hermes.gateway.plist`. It includes three environment variables:
+The generated plist lives at `~/Library/LaunchAgents/ai.pace.gateway.plist`. It includes three environment variables:
 
 - **PATH** — your full shell PATH at install time, with the venv `bin/` and `node_modules/.bin` prepended. This ensures user-installed tools (Node.js, ffmpeg, etc.) are available to gateway subprocesses like the WhatsApp bridge.
 - **VIRTUAL_ENV** — points to the Python virtualenv so tools can resolve packages correctly.
 - **HERMES_HOME** — scopes the gateway to your Hermes installation.
 
 :::tip PATH changes after install
-launchd plists are static — if you install new tools (e.g. a new Node.js version via nvm, or ffmpeg via Homebrew) after setting up the gateway, run `hermes gateway install` again to capture the updated PATH. The gateway will detect the stale plist and reload automatically.
+launchd plists are static — if you install new tools (e.g. a new Node.js version via nvm, or ffmpeg via Homebrew) after setting up the gateway, run `pace gateway install` again to capture the updated PATH. The gateway will detect the stale plist and reload automatically.
 :::
 
 :::info Multiple installations
-Like the Linux systemd service, each `HERMES_HOME` directory gets its own launchd label. The default `~/.hermes` uses `ai.hermes.gateway`; other installations use `ai.hermes.gateway-<suffix>`.
+Like the Linux systemd service, each `HERMES_HOME` directory gets its own launchd label. The default `~/.pace` uses `ai.pace.gateway`; other installations use `ai.pace.gateway-<suffix>`.
 :::
 
 ## Platform-Specific Toolsets
@@ -681,7 +681,7 @@ The breaker does **not** auto-resume — it stays open until you run `/platform 
 
 When an adapter is paused, check:
 
-1. **Gateway log** (`~/.hermes/logs/gateway.log` or the systemd / launchd unit log). Search for the platform name and `circuit breaker`, `paused`, or `disabled`. The trip event includes the failure count and the last error.
+1. **Gateway log** (`~/.pace/logs/gateway.log` or the systemd / launchd unit log). Search for the platform name and `circuit breaker`, `paused`, or `disabled`. The trip event includes the failure count and the last error.
 2. **`/platform list`** output — shows the current state and last reason.
 3. **The provider's status page** (Telegram bot API status, Discord status, etc.). The breaker tripped because the platform was unhealthy; don't try to resume until it's back.
 

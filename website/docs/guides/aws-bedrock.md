@@ -31,17 +31,17 @@ On AWS compute, attach an IAM role with `AmazonBedrockFullAccess` and you're don
 cd ~/.hermes/hermes-agent && uv pip install -e ".[bedrock]"
 
 # Select Bedrock as your provider
-hermes model
+pace model
 # → Choose "More providers..." → "AWS Bedrock"
 # → Select your region and model
 
 # Start chatting
-hermes chat
+pace chat
 ```
 
 ## Configuration
 
-After running `hermes model`, your `~/.hermes/config.yaml` will contain:
+After running `pace model`, your `~/.pace/config.yaml` will contain:
 
 ```yaml
 model:
@@ -98,7 +98,7 @@ For models whose context window isn't in Hermes' static table, Hermes can probe 
 
 ## Available Models
 
-Bedrock models use **inference profile IDs** for on-demand invocation. The `hermes model` picker shows these automatically, with recommended models at the top:
+Bedrock models use **inference profile IDs** for on-demand invocation. The `pace model` picker shows these automatically, with recommended models at the top:
 
 | Model | ID | Notes |
 |-------|-----|-------|
@@ -127,7 +127,7 @@ Use the `/model` command during a conversation:
 ## Diagnostics
 
 ```bash
-hermes doctor
+pace doctor
 ```
 
 The doctor checks:
@@ -141,8 +141,8 @@ The doctor checks:
 Bedrock works with all Hermes gateway platforms (Telegram, Discord, Slack, Feishu, etc.). Configure Bedrock as your provider, then start the gateway normally:
 
 ```bash
-hermes gateway setup
-hermes gateway start
+pace gateway setup
+pace gateway start
 ```
 
 The gateway reads `config.yaml` and uses the same Bedrock provider configuration.
@@ -175,4 +175,4 @@ You've hit the Bedrock per-model rate limit. Hermes automatically retries with b
 
 For a fully automated deployment on EC2 with CloudFormation:
 
-**[sample-hermes-agent-on-aws-with-bedrock](https://github.com/JiaDe-Wu/sample-hermes-agent-on-aws-with-bedrock)** — creates VPC, IAM role, EC2 instance, and configures Bedrock automatically. Deploy in any region with one click.
+**[sample-pace-agent-on-aws-with-bedrock](https://github.com/JiaDe-Wu/sample-pace-agent-on-aws-with-bedrock)** — creates VPC, IAM role, EC2 instance, and configures Bedrock automatically. Deploy in any region with one click.

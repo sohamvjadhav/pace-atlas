@@ -31,16 +31,16 @@ result before hitting Enter.
 :::
 
 ```sh
-mkdir -p ~/.hermes
+mkdir -p ~/.pace
 docker run -it --rm \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent setup
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent setup
 ```
 
-This drops you into the setup wizard, which will prompt you for your API keys and write them to `~/.hermes/.env`. You only need to do this once. It is highly recommended to set up a chat system for the gateway to work with at this point.
+This drops you into the setup wizard, which will prompt you for your API keys and write them to `~/.pace/.env`. You only need to do this once. It is highly recommended to set up a chat system for the gateway to work with at this point.
 
 :::tip
-Inside the container, run `hermes setup --portal` once — the refresh token persists in the mounted `~/.hermes` volume. See [Nous Portal](/integrations/nous-portal).
+Inside the container, run `pace setup --portal` once — the refresh token persists in the mounted `~/.pace` volume. See [Nous Portal](/integrations/nous-portal).
 :::
 
 ## Running in gateway mode
@@ -49,11 +49,11 @@ Once configured, run the container in the background as a persistent gateway (Te
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
-  -v ~/.hermes:/opt/data \
+  -v ~/.pace:/opt/data \
   -p 8642:8642 \
-  nousresearch/hermes-agent gateway run
+  nousresearch/pace-agent gateway run
 ```
 
 Port 8642 exposes the gateway's [OpenAI-compatible API server](./features/api-server.md) and health endpoint. It's optional if you only use chat platforms (Telegram, Discord, etc.), but required if you want the dashboard or external tools to reach the gateway.
@@ -86,15 +86,15 @@ Note: the API server is gated on `API_SERVER_ENABLED=true`. To expose it beyond 
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
-  -v ~/.hermes:/opt/data \
+  -v ~/.pace:/opt/data \
   -p 8642:8642 \
   -e API_SERVER_ENABLED=true \
   -e API_SERVER_HOST=0.0.0.0 \
   -e API_SERVER_KEY="$(openssl rand -hex 32)" \
   -e API_SERVER_CORS_ORIGINS='*' \
-  nousresearch/hermes-agent gateway run
+  nousresearch/pace-agent gateway run
 ```
 
 Opening any port on an internet facing machine is a security risk. You should not do it unless you understand the risks.
@@ -105,13 +105,13 @@ The built-in web dashboard runs as a supervised s6-rc service alongside the gate
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
-  -v ~/.hermes:/opt/data \
+  -v ~/.pace:/opt/data \
   -p 8642:8642 \
   -p 9119:9119 \
   -e HERMES_DASHBOARD=1 \
-  nousresearch/hermes-agent gateway run
+  nousresearch/pace-agent gateway run
 ```
 
 The dashboard is supervised by s6 — if it crashes, `s6-supervise` restarts it automatically after a short backoff. Dashboard stdout/stderr is forwarded to `docker logs <container>` (no prefix; the gateway's own output now lives in a per-profile s6-log file — see [Where the logs go](#where-the-logs-go) below — so the two streams don't clash).
@@ -152,19 +152,19 @@ To open an interactive chat session against a running data directory:
 
 ```sh
 docker run -it --rm \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent
 ```
 
 Or if you have already opened a terminal in your running container (via Docker Desktop for instance), just run:
 
 ```sh
-/opt/hermes/.venv/bin/hermes
+/opt/pace/.venv/bin/pace
 ```
 
 ## Persistent volumes
 
-The `/opt/data` volume is the single source of truth for all Hermes state. It maps to your host's `~/.hermes/` directory and contains:
+The `/opt/data` volume is the single source of truth for all Hermes state. It maps to your host's `~/.pace/` directory and contains:
 
 | Path | Contents |
 |------|----------|
@@ -198,9 +198,9 @@ Never run two Hermes **gateway** containers against the same data directory simu
 
 ## Multi-profile support
 
-Hermes supports [multiple profiles](../reference/profile-commands.md) — separate `~/.hermes/` subdirectories that let you run independent agents (different SOUL, skills, memory, sessions, credentials) from a single installation. **Inside the official Docker image, the s6 supervision tree treats each profile as a first-class supervised service**, so the recommended deployment is **one container hosting all profiles**.
+Hermes supports [multiple profiles](../reference/profile-commands.md) — separate `~/.pace/` subdirectories that let you run independent agents (different SOUL, skills, memory, sessions, credentials) from a single installation. **Inside the official Docker image, the s6 supervision tree treats each profile as a first-class supervised service**, so the recommended deployment is **one container hosting all profiles**.
 
-Each profile created with `hermes profile create <name>` gets:
+Each profile created with `pace profile create <name>` gets:
 
 - A dedicated s6 service slot at `/run/service/gateway-<name>/`, registered dynamically by the runtime — no container rebuild required.
 - Auto-restart on crash, backoff-managed by `s6-supervise`.
@@ -211,21 +211,21 @@ The lifecycle commands you'd run on the host work the same way from inside the c
 
 ```sh
 # Create a profile — registers the gateway-<name> s6 slot.
-docker exec hermes hermes profile create coder
+docker exec pace pace profile create coder
 
 # Start / stop / restart — dispatches s6-svc; the gateway lifecycle survives docker restart.
-docker exec hermes hermes -p coder gateway start
-docker exec hermes hermes -p coder gateway stop
-docker exec hermes hermes -p coder gateway restart
+docker exec pace pace -p coder gateway start
+docker exec pace pace -p coder gateway stop
+docker exec pace pace -p coder gateway restart
 
 # Status — reports `Manager: s6 (container supervisor)` inside the container.
-docker exec hermes hermes -p coder gateway status
+docker exec pace pace -p coder gateway status
 
 # Remove a profile — tears down the s6 slot too.
-docker exec hermes hermes profile delete coder
+docker exec pace pace profile delete coder
 ```
 
-Under the hood, `hermes gateway start/stop/restart` inside the container is intercepted and routed to `s6-svc` against the right service directory; you don't need to learn the s6 commands directly. For raw supervisor state, use `/command/s6-svstat /run/service/gateway-<name>` (note `/command/` is on PATH only for processes spawned by the supervision tree — when calling from `docker exec`, pass the absolute path).
+Under the hood, `pace gateway start/stop/restart` inside the container is intercepted and routed to `s6-svc` against the right service directory; you don't need to learn the s6 commands directly. For raw supervisor state, use `/command/s6-svstat /run/service/gateway-<name>` (note `/command/` is on PATH only for processes spawned by the supervision tree — when calling from `docker exec`, pass the absolute path).
 
 ### Reaching more than one profile from outside the container
 
@@ -258,10 +258,10 @@ Before the s6 migration, "one container per profile" was the recommended pattern
 |---|---|---|
 | Disk overhead | One image, one bundled venv, one Playwright cache | N images / N caches |
 | Memory overhead | Shared Python interpreter cache, shared node_modules | Duplicated per container |
-| Profile creation | `docker exec ... hermes profile create <name>` (seconds) | New `docker run` invocation + port allocation + bind-mount config |
+| Profile creation | `docker exec ... pace profile create <name>` (seconds) | New `docker run` invocation + port allocation + bind-mount config |
 | Per-profile crash recovery | `s6-supervise` auto-restart | Docker's `--restart unless-stopped` (slower, kills sibling work) |
 | Logs | Per-profile rotated file via `s6-log`, plus container-boot audit log | `docker logs <name>` per container — no built-in rotation |
-| Backup | One `~/.hermes` directory | N directories to coordinate |
+| Backup | One `~/.pace` directory | N directories to coordinate |
 
 The default profile (`default`) is always registered on first boot, so a fresh container ships with one supervised gateway out of the box. Additional profiles are pure runtime adds.
 
@@ -279,7 +279,7 @@ In those cases, declare one service per profile with distinct `container_name`, 
 ```yaml
 services:
   hermes-work:
-    image: nousresearch/hermes-agent:latest
+    image: nousresearch/pace-agent:latest
     container_name: hermes-work
     restart: unless-stopped
     command: gateway run
@@ -289,7 +289,7 @@ services:
       - ~/.hermes-work:/opt/data
 
   hermes-personal:
-    image: nousresearch/hermes-agent:latest
+    image: nousresearch/pace-agent:latest
     container_name: hermes-personal
     restart: unless-stopped
     command: gateway run
@@ -299,7 +299,7 @@ services:
       - ~/.hermes-personal:/opt/data
 ```
 
-The warning from [Persistent volumes](#persistent-volumes) still applies: never point two containers at the same `~/.hermes` directory simultaneously. The s6 supervisor inside each container manages its own profile set; cross-container sharing of a data volume corrupts session files and memory stores.
+The warning from [Persistent volumes](#persistent-volumes) still applies: never point two containers at the same `~/.pace` directory simultaneously. The s6 supervisor inside each container manages its own profile set; cross-container sharing of a data volume corrupts session files and memory stores.
 
 ## Where the logs go
 
@@ -307,15 +307,15 @@ The s6 container has four distinct log surfaces, and "why isn't my gateway showi
 
 | Source | Where it lands | How to read it |
 |---|---|---|
-| **Per-profile gateway** (`hermes gateway run` and per-profile gateways under s6) | Tee'd to two places: `docker logs <container>` (real time, no extra prefix) **and** `${HERMES_HOME}/logs/gateways/<profile>/current` (rotated, ISO-8601 timestamped, 10 archives × 1 MB each) | `docker logs -f hermes` or `tail -F ~/.hermes/logs/gateways/default/current` on the host |
-| **Dashboard** (when `HERMES_DASHBOARD=1`) | `docker logs <container>` (no prefix) | `docker logs -f hermes` — interleaved with gateway lines |
-| **Boot reconciler** (records which profile gateways were restored on each container start) | `${HERMES_HOME}/logs/container-boot.log` (append-only audit log) | `tail -F ~/.hermes/logs/container-boot.log` |
-| **Generic Hermes logs** (`agent.log`, `errors.log`) | `${HERMES_HOME}/logs/` (profile-aware) | `docker exec hermes hermes logs --follow [--level WARNING] [--session <id>]` |
+| **Per-profile gateway** (`pace gateway run` and per-profile gateways under s6) | Tee'd to two places: `docker logs <container>` (real time, no extra prefix) **and** `${HERMES_HOME}/logs/gateways/<profile>/current` (rotated, ISO-8601 timestamped, 10 archives × 1 MB each) | `docker logs -f pace` or `tail -F ~/.pace/logs/gateways/default/current` on the host |
+| **Dashboard** (when `HERMES_DASHBOARD=1`) | `docker logs <container>` (no prefix) | `docker logs -f pace` — interleaved with gateway lines |
+| **Boot reconciler** (records which profile gateways were restored on each container start) | `${HERMES_HOME}/logs/container-boot.log` (append-only audit log) | `tail -F ~/.pace/logs/container-boot.log` |
+| **Generic Hermes logs** (`agent.log`, `errors.log`) | `${HERMES_HOME}/logs/` (profile-aware) | `docker exec pace pace logs --follow [--level WARNING] [--session <id>]` |
 
 Two practical consequences worth knowing:
 
 - The file copy at `logs/gateways/<profile>/current` is what survives container restarts. `docker logs` only retains output from the current container's lifetime (and is wiped on `docker rm`); the rotated files persist on the bind-mounted volume.
-- The boot reconciler's audit line shape is `<iso-timestamp> profile=<name> prior_state=<state> action=<registered|started>`, so a quick `grep profile=coder ~/.hermes/logs/container-boot.log` reveals when a given profile was last restored and whether s6 auto-started it.
+- The boot reconciler's audit line shape is `<iso-timestamp> profile=<name> prior_state=<state> action=<registered|started>`, so a quick `grep profile=coder ~/.pace/logs/container-boot.log` reveals when a given profile was last restored and whether s6 auto-started it.
 
 ## Environment variable forwarding
 
@@ -323,10 +323,10 @@ API keys are read from `/opt/data/.env` inside the container. You can also pass 
 
 ```sh
 docker run -it --rm \
-  -v ~/.hermes:/opt/data \
+  -v ~/.pace:/opt/data \
   -e ANTHROPIC_API_KEY="sk-ant-..." \
   -e OPENAI_API_KEY="sk-..." \
-  nousresearch/hermes-agent
+  nousresearch/pace-agent
 ```
 
 Direct `-e` flags override values from `.env`. This is useful for CI/CD or secrets-manager integrations where you don't want keys on disk.
@@ -341,16 +341,16 @@ For persistent deployment with both the gateway and dashboard, a `docker-compose
 
 ```yaml
 services:
-  hermes:
-    image: nousresearch/hermes-agent:latest
-    container_name: hermes
+  pace:
+    image: nousresearch/pace-agent:latest
+    container_name: pace
     restart: unless-stopped
     command: gateway run
     ports:
       - "8642:8642"   # gateway API
       - "9119:9119"   # dashboard (only reached when HERMES_DASHBOARD=1)
     volumes:
-      - ~/.hermes:/opt/data
+      - ~/.pace:/opt/data
     environment:
       - HERMES_DASHBOARD=1
       # Uncomment to forward specific env vars instead of using .env file:
@@ -397,7 +397,7 @@ ctl.!default {
 Then build a small derived image with the ALSA PulseAudio plugin installed:
 
 ```dockerfile title="Dockerfile.audio"
-FROM nousresearch/hermes-agent:latest
+FROM nousresearch/pace-agent:latest
 
 USER root
 RUN apt-get update \
@@ -409,16 +409,16 @@ Use that image in Compose and pass through the host user's PulseAudio socket and
 
 ```yaml
 services:
-  hermes:
+  pace:
     build:
       context: .
       dockerfile: Dockerfile.audio
-    image: hermes-agent-audio
-    container_name: hermes
+    image: pace-agent-audio
+    container_name: pace
     restart: unless-stopped
     command: gateway run
     volumes:
-      - ~/.hermes:/opt/data
+      - ~/.pace:/opt/data
       - /run/user/${HERMES_UID}/pulse:/run/user/${HERMES_UID}/pulse
       - ~/.config/pulse/cookie:/tmp/pulse-cookie:ro
       - ./asound.conf:/etc/asound.conf:ro
@@ -441,7 +441,7 @@ docker compose up -d --build
 To verify what PortAudio sees inside the container:
 
 ```sh
-docker exec hermes /opt/hermes/.venv/bin/python -c "import sounddevice as sd; print(sd.query_devices())"
+docker exec pace /opt/pace/.venv/bin/python -c "import sounddevice as sd; print(sd.query_devices())"
 ```
 
 ## Resource limits
@@ -460,11 +460,11 @@ Set limits in Docker:
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
   --memory=4g --cpus=2 \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent gateway run
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent gateway run
 ```
 
 ## What the Dockerfile does
@@ -491,7 +491,7 @@ On the PID-1 path, `/init`:
 4. Exec's the container's CMD as the main program (`/opt/hermes/docker/main-wrapper.sh`), which routes the arguments the user passed to `docker run`:
    - no args → `hermes` (the default)
    - first arg is an executable on PATH (e.g. `sleep`, `bash`) → exec it directly
-   - anything else → `hermes <args>` (subcommand passthrough)
+   - anything else → `pace <args>` (subcommand passthrough)
    The container exits when this main program exits, with its exit code.
 
 :::warning Breaking change vs. pre-s6 images
@@ -499,24 +499,24 @@ The container ENTRYPOINT is now the `entrypoint-dispatch.sh` dispatcher (which d
 :::
 
 :::warning Privilege model
-Do not override the image entrypoint unless you keep `/init` (or, equivalently, the legacy `docker/entrypoint.sh` shim that forwards to the stage2 hook) in the command chain. s6-overlay's `/init` runs as root so it can chown the volume on first boot, then drops to the `hermes` user via `s6-setuidgid` for every supervised service AND for the main program. Starting `hermes gateway run` as root inside the official image is refused by default because it can leave root-owned files in `/opt/data` and break later dashboard or gateway starts. Set `HERMES_ALLOW_ROOT_GATEWAY=1` only when you intentionally accept that risk.
+Do not override the image entrypoint unless you keep `/init` (or, equivalently, the legacy `docker/entrypoint.sh` shim that forwards to the stage2 hook) in the command chain. s6-overlay's `/init` runs as root so it can chown the volume on first boot, then drops to the `pace` user via `s6-setuidgid` for every supervised service AND for the main program. Starting `pace gateway run` as root inside the official image is refused by default because it can leave root-owned files in `/opt/data` and break later dashboard or gateway starts. Set `HERMES_ALLOW_ROOT_GATEWAY=1` only when you intentionally accept that risk.
 :::
 
-### `docker exec` automatically drops to the `hermes` user
+### `docker exec` automatically drops to the `pace` user
 
-`docker exec hermes <cmd>` defaults to running as root inside the container, but the image ships a thin shim at `/opt/hermes/bin/hermes` (earliest on PATH) that detects root callers and transparently re-execs through `s6-setuidgid hermes`. So `docker exec hermes login`, `docker exec hermes profile create …`, `docker exec hermes setup`, etc. all write files owned by UID 10000 — i.e. readable by the supervised gateway — with no extra `--user` flag needed. Non-root callers (the supervised processes themselves, `docker exec --user hermes`, kanban subagents inside the container) hit a short-circuit that exec's the venv binary directly, so there's no overhead on the hot paths.
+`docker exec pace <cmd>` defaults to running as root inside the container, but the image ships a thin shim at `/opt/pace/bin/pace` (earliest on PATH) that detects root callers and transparently re-execs through `s6-setuidgid pace`. So `docker exec pace login`, `docker exec pace profile create …`, `docker exec pace setup`, etc. all write files owned by UID 10000 — i.e. readable by the supervised gateway — with no extra `--user` flag needed. Non-root callers (the supervised processes themselves, `docker exec --user pace`, kanban subagents inside the container) hit a short-circuit that exec's the venv binary directly, so there's no overhead on the hot paths.
 
 If you specifically need a `docker exec` that retains root semantics (diagnostic sessions, inspecting root-only state, files outside `/opt/data` that root happens to own), opt out per invocation:
 
 ```sh
-docker exec -e HERMES_DOCKER_EXEC_AS_ROOT=1 hermes <cmd>
+docker exec -e HERMES_DOCKER_EXEC_AS_ROOT=1 pace <cmd>
 ```
 
-The shim accepts `1` / `true` / `yes` (case-insensitive). Anything else — including typos like `=0` — falls through to the drop, so silent opt-outs aren't possible. If `s6-setuidgid` isn't available (custom builds that stripped s6-overlay), the shim refuses to run as root and exits 126 instead, surfacing the broken privilege model loudly rather than regressing to the historical footgun where `docker exec hermes login` would write `auth.json` as `root:root` and break the supervised gateway's auth on every chat platform message.
+The shim accepts `1` / `true` / `yes` (case-insensitive). Anything else — including typos like `=0` — falls through to the drop, so silent opt-outs aren't possible. If `s6-setuidgid` isn't available (custom builds that stripped s6-overlay), the shim refuses to run as root and exits 126 instead, surfacing the broken privilege model loudly rather than regressing to the historical footgun where `docker exec pace login` would write `auth.json` as `root:root` and break the supervised gateway's auth on every chat platform message.
 
 ### Per-profile gateway supervision
 
-Each profile created with `hermes profile create <name>` automatically gets an s6-supervised gateway service registered at `/run/service/gateway-<name>/`, with state-persistent auto-restart across container restarts. See [Multi-profile support](#multi-profile-support) above for the user-facing workflow and the lifecycle commands.
+Each profile created with `pace profile create <name>` automatically gets an s6-supervised gateway service registered at `/run/service/gateway-<name>/`, with state-persistent auto-restart across container restarts. See [Multi-profile support](#multi-profile-support) above for the user-facing workflow and the lifecycle commands.
 
 **Supervision benefits over the pre-s6 image:**
 
@@ -525,7 +525,7 @@ Each profile created with `hermes profile create <name>` automatically gets an s
 - `docker restart`, image upgrades (`docker compose up -d --force-recreate`), and unexpected exits preserve running gateways: the cont-init reconciler reads `$HERMES_HOME/profiles/<name>/gateway_state.json` and brings the slot back up if the last recorded state was `running`. Only an explicit `hermes gateway stop` records `stopped` and keeps the gateway down across the restart; the container/s6 SIGTERM sent on a restart or upgrade is treated as "still running" and auto-starts.
 - Per-profile gateway logs persist under `$HERMES_HOME/logs/gateways/<profile>/current` (rotated by `s6-log`), and the reconciler's actions are appended to `$HERMES_HOME/logs/container-boot.log` per boot. See [Where the logs go](#where-the-logs-go) for the full routing map.
 
-`hermes status` inside the container reports `Manager: s6 (container supervisor)`. Use `/command/s6-svstat /run/service/gateway-<name>` for the raw supervisor view (note `/command/` is on PATH for supervision-tree processes only; pass the absolute path when calling from `docker exec`).
+`pace status` inside the container reports `Manager: s6 (container supervisor)`. Use `/command/s6-svstat /run/service/gateway-<name>` for the raw supervisor view (note `/command/` is on PATH for supervision-tree processes only; pass the absolute path when calling from `docker exec`).
 
 ## Upgrading
 
@@ -536,13 +536,13 @@ When a migration is needed, Hermes writes timestamped backups next to
 `config.yaml` and `.env` first.
 
 ```sh
-docker pull nousresearch/hermes-agent:latest
-docker rm -f hermes
+docker pull nousresearch/pace-agent:latest
+docker rm -f pace
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent gateway run
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent gateway run
 ```
 
 Or with Docker Compose:
@@ -557,7 +557,7 @@ persisted config manually before letting the new image rewrite it.
 
 ## Skills and credential files
 
-When using Docker as the execution environment (not the methods above, but when the agent runs commands inside a Docker sandbox — see [Configuration → Docker Backend](./configuration.md#docker-backend)), Hermes reuses a single long-lived container for all tool calls and automatically bind-mounts the skills directory (`~/.hermes/skills/`) and any credential files declared by skills into that container as read-only volumes. Skill scripts, templates, and references are available inside the sandbox without manual configuration, and because the container persists for the life of the Hermes process, any dependencies you install or files you write stay around for the next tool call.
+When using Docker as the execution environment (not the methods above, but when the agent runs commands inside a Docker sandbox — see [Configuration → Docker Backend](./configuration.md#docker-backend)), Hermes reuses a single long-lived container for all tool calls and automatically bind-mounts the skills directory (`~/.pace/skills/`) and any credential files declared by skills into that container as read-only volumes. Skill scripts, templates, and references are available inside the sandbox without manual configuration, and because the container persists for the life of the Hermes process, any dependencies you install or files you write stay around for the next tool call.
 
 The same syncing happens for SSH and Modal backends — skills and credential files are uploaded via rsync or the Modal mount API before each command.
 
@@ -579,31 +579,31 @@ This is a good fit for tools that are quick to install and used occasionally. Fo
 
 ### Durable installs — build a derived image
 
-When a tool must be available immediately on every container start with no re-install delay, build a new image that inherits from `nousresearch/hermes-agent` and installs the tool in a layer:
+When a tool must be available immediately on every container start with no re-install delay, build a new image that inherits from `nousresearch/pace-agent` and installs the tool in a layer:
 
 ```dockerfile
-FROM nousresearch/hermes-agent:latest
+FROM nousresearch/pace-agent:latest
 
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends <your-package> \
     && rm -rf /var/lib/apt/lists/*
-USER hermes
+USER pace
 ```
 
 Build it and use it in place of the official image:
 
 ```sh
-docker build -t my-hermes:latest .
+docker build -t my-pace:latest .
 docker run -d \
-  --name hermes \
+  --name pace \
   --restart unless-stopped \
-  -v ~/.hermes:/opt/data \
+  -v ~/.pace:/opt/data \
   -p 8642:8642 \
-  my-hermes:latest gateway run
+  my-pace:latest gateway run
 ```
 
-The entrypoint script and `/opt/data` semantics are inherited unchanged, so the rest of this page still applies. Remember to rebuild the image when pulling a newer upstream `nousresearch/hermes-agent`.
+The entrypoint script and `/opt/data` semantics are inherited unchanged, so the rest of this page still applies. Remember to rebuild the image when pulling a newer upstream `nousresearch/pace-agent`.
 
 ### Complex tools or multi-service stacks — run a sidecar container
 
@@ -611,15 +611,15 @@ For tools that bring their own service (a database, a web server, a queue, a hea
 
 ```yaml
 services:
-  hermes:
-    image: nousresearch/hermes-agent:latest
-    container_name: hermes
+  pace:
+    image: nousresearch/pace-agent:latest
+    container_name: pace
     restart: unless-stopped
     command: gateway run
     ports:
       - "8642:8642"
     volumes:
-      - ~/.hermes:/opt/data
+      - ~/.pace:/opt/data
     networks:
       - hermes-net
 
@@ -639,7 +639,7 @@ From inside the Hermes container, the sidecar is reachable at `http://my-tool:<p
 
 ### Broadly useful tools — open an issue or pull request
 
-If a tool is likely to be useful to most Hermes Agent users, consider contributing it upstream rather than carrying it in a private derived image. Open an issue or pull request on the [hermes-agent repository](https://github.com/NousResearch/hermes-agent) describing the tool and its use case. Tools that get bundled into the official image benefit every user and avoid the maintenance overhead of a downstream fork.
+If a tool is likely to be useful to most Hermes Agent users, consider contributing it upstream rather than carrying it in a private derived image. Open an issue or pull request on the [pace-agent repository](https://github.com/NousResearch/pace-agent) describing the tool and its use case. Tools that get bundled into the official image benefit every user and avoid the maintenance overhead of a downstream fork.
 
 ## Connecting to local inference servers (vLLM, Ollama, etc.)
 
@@ -669,15 +669,15 @@ services:
           devices:
             - capabilities: [gpu]
 
-  hermes:
-    image: nousresearch/hermes-agent:latest
-    container_name: hermes
+  pace:
+    image: nousresearch/pace-agent:latest
+    container_name: pace
     restart: unless-stopped
     command: gateway run
     ports:
       - "8642:8642"
     volumes:
-      - ~/.hermes:/opt/data
+      - ~/.pace:/opt/data
     networks:
       - hermes-net
 
@@ -686,7 +686,7 @@ networks:
     driver: bridge
 ```
 
-Then in your `~/.hermes/config.yaml`, use the **container name** as the hostname:
+Then in your `~/.pace/config.yaml`, use the **container name** as the hostname:
 
 ```yaml
 model:
@@ -711,10 +711,10 @@ If your inference server runs directly on the host (not in Docker), use `host.do
 
 ```sh
 docker run -d \
-  --name hermes \
-  -v ~/.hermes:/opt/data \
+  --name pace \
+  -v ~/.pace:/opt/data \
   -p 8642:8642 \
-  nousresearch/hermes-agent gateway run
+  nousresearch/pace-agent gateway run
 ```
 
 ```yaml
@@ -730,10 +730,10 @@ model:
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --network host \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent gateway run
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent gateway run
 ```
 
 ```yaml
@@ -753,7 +753,7 @@ model:
 From inside the Hermes container, confirm the inference server is reachable:
 
 ```sh
-docker exec hermes curl -s http://vllm:8000/v1/models
+docker exec pace curl -s http://vllm:8000/v1/models
 ```
 
 You should see a JSON response listing your served model. If this fails, check:
@@ -778,29 +778,29 @@ model:
 
 ### Container exits immediately
 
-Check logs: `docker logs hermes`. Common causes:
+Check logs: `docker logs pace`. Common causes:
 - Missing or invalid `.env` file — run interactively first to complete setup
 - Port conflicts if running with exposed ports
 
 ### "Permission denied" errors
 
-The container's stage2 hook drops privileges to the non-root `hermes` user (UID 10000) via `s6-setuidgid` inside each supervised service. If your host `~/.hermes/` is owned by a different UID, set `HERMES_UID`/`HERMES_GID` — or their `PUID`/`PGID` aliases, for parity with LinuxServer.io and NAS images — to match your host user, or ensure the data directory is writable:
+The container's stage2 hook drops privileges to the non-root `pace` user (UID 10000) via `s6-setuidgid` inside each supervised service. If your host `~/.pace/` is owned by a different UID, set `HERMES_UID`/`HERMES_GID` — or their `PUID`/`PGID` aliases, for parity with LinuxServer.io and NAS images — to match your host user, or ensure the data directory is writable:
 
 ```sh
-chmod -R 755 ~/.hermes
+chmod -R 755 ~/.pace
 ```
 
 On a NAS (UGOS, Synology, unRAID) the data directory is typically a **bind mount** owned by a host UID the container cannot `chown`. Set `PUID`/`PGID` (or `HERMES_UID`/`HERMES_GID`) to that host user so the runtime runs as the owner of the mount rather than UID 10000:
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   -e PUID=1000 -e PGID=10 \
-  -v /volume1/docker/hermes:/opt/data \
-  nousresearch/hermes-agent gateway run
+  -v /volume1/docker/pace:/opt/data \
+  nousresearch/pace-agent gateway run
 ```
 
-`docker exec hermes <cmd>` automatically drops to UID 10000 too — see [`docker exec` automatically drops to the `hermes` user](#docker-exec-automatically-drops-to-the-hermes-user) for details and the per-invocation opt-out.
+`docker exec pace <cmd>` automatically drops to UID 10000 too — see [`docker exec` automatically drops to the `pace` user](#docker-exec-automatically-drops-to-the-hermes-user) for details and the per-invocation opt-out.
 
 ### Browser tools not working
 
@@ -808,10 +808,10 @@ Playwright needs shared memory. Add `--shm-size=1g` to your Docker run command:
 
 ```sh
 docker run -d \
-  --name hermes \
+  --name pace \
   --shm-size=1g \
-  -v ~/.hermes:/opt/data \
-  nousresearch/hermes-agent gateway run
+  -v ~/.pace:/opt/data \
+  nousresearch/pace-agent gateway run
 ```
 
 ### Gateway not reconnecting after network issues
@@ -819,13 +819,13 @@ docker run -d \
 The `--restart unless-stopped` flag handles most transient failures. If the gateway is stuck, restart the container:
 
 ```sh
-docker restart hermes
+docker restart pace
 ```
 
 ### Checking container health
 
 ```sh
-docker logs --tail 50 hermes          # Recent logs
-docker run -it --rm nousresearch/hermes-agent:latest version     # Verify version
-docker stats hermes                    # Resource usage
+docker logs --tail 50 pace          # Recent logs
+docker run -it --rm nousresearch/pace-agent:latest version     # Verify version
+docker stats pace                    # Resource usage
 ```

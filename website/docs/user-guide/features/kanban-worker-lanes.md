@@ -30,7 +30,7 @@ The dispatcher matches `task.assignee` against either a Hermes profile name (the
 
 ### 2. A spawn mechanism
 
-For Hermes profile lanes, the dispatcher's `_default_spawn` runs `hermes -p <assignee> chat -q <prompt>` (or the equivalent module form when the `hermes` shim isn't on `$PATH`) inside the task's pinned workspace, with these env vars set:
+For Hermes profile lanes, the dispatcher's `_default_spawn` runs `pace -p <assignee> chat -q <prompt>` (or the equivalent module form when the `pace` shim isn't on `$PATH`) inside the task's pinned workspace, with these env vars set:
 
 | Variable | Carries |
 |---|---|
@@ -60,7 +60,7 @@ The kanban kernel enforces that exactly one of these terminates each run. A work
 
 For most code-changing tasks, the work isn't truly *done* the moment the worker finishes — it needs a human reviewer. The kanban kernel doesn't enforce this distinction (a "code-changing task" is fuzzy and forcing block-instead-of-complete on every code worker would break flows where no review is wanted). It's a convention layered on top:
 
-- **Block instead of complete**, with `reason` prefixed `review-required: ` so the dashboard / `hermes kanban show` surfaces the row as awaiting review.
+- **Block instead of complete**, with `reason` prefixed `review-required: ` so the dashboard / `pace kanban show` surfaces the row as awaiting review.
 - **Drop structured metadata into a `kanban_comment` first** since `kanban_block` only carries the human-readable `reason`. Comments are the durable annotation channel — every audit-relevant field (changed_files, tests_run, diff_path or PR url, decisions) belongs there.
 - **Reviewer either approves and unblocks**, which respawns the worker with the comment thread for follow-ups; or asks for changes via another comment, which the next worker run sees as part of `kanban_show`'s context.
 
@@ -74,7 +74,7 @@ The dispatcher writes per-task worker stdout/stderr to `<board-root>/logs/<task_
 - `task_events` rows carry every state transition (`promoted`, `claimed`, `heartbeat`, `completed`, `blocked`, `gave_up`, `crashed`, `timed_out`, `reclaimed`, `claim_extended`).
 - `kanban_show` returns both, so a reviewer (or a follow-up worker) reading the task gets the full history without needing dashboard access.
 
-The dashboard renders run history with summaries, metadata blocks, and exit-status badges. CLI users can run `hermes kanban tail <task_id>` to follow live, or `hermes kanban runs <task_id>` for the historical attempt list.
+The dashboard renders run history with summaries, metadata blocks, and exit-status badges. CLI users can run `pace kanban tail <task_id>` to follow live, or `pace kanban runs <task_id>` for the historical attempt list.
 
 ## Existing lane shapes
 
@@ -94,7 +94,7 @@ Wiring a non-Hermes CLI tool (Codex CLI, Claude Code CLI, OpenCode CLI, a local 
 
 If you're considering adding a CLI lane, open an issue describing the specific CLI and the workflow you're trying to enable. The contract above is the constraints any such lane must satisfy; the implementation shape (one plugin per CLI vs a generic CLI-runner plugin parameterised by config) is open.
 
-The historical issue for this is [#19931](https://github.com/NousResearch/hermes-agent/issues/19931) and the closed-not-merged Codex-specific PR [#19924](https://github.com/NousResearch/hermes-agent/pull/19924) — those describe the original architecture proposal but didn't land a runner.
+The historical issue for this is [#19931](https://github.com/NousResearch/pace-agent/issues/19931) and the closed-not-merged Codex-specific PR [#19924](https://github.com/NousResearch/pace-agent/pull/19924) — those describe the original architecture proposal but didn't land a runner.
 
 ## Failure modes the dispatcher handles
 
@@ -104,7 +104,7 @@ So lane authors don't have to reimplement these:
 - **Crashed worker** — a worker whose host-local PID has vanished is detected by `detect_crashed_workers` and reaped; the task increments `consecutive_failures` and may auto-block when the breaker trips.
 - **Run-level retry** — when a task is retried (post-block, post-crash, post-reclaim), the worker can use the `expected_run_id` parameter on terminating tools to fail fast if its own run was already superseded.
 - **Per-task max runtime** — `task.max_runtime_seconds` hard-caps wall-clock time per run, regardless of PID liveness. Catches genuinely-deadlocked workers that the live-PID extension would otherwise keep running.
-- **Stranded-task detection** — a ready task whose assignee never produces a claim within `kanban.stranded_threshold_seconds` (default 30 min) shows up in `hermes kanban diagnostics` as a `stranded_in_ready` warning. Severity escalates to error at 2x the threshold and critical at 6x. Catches typo'd assignees, deleted profiles, and down external worker pools in one signal — identity-agnostic, no per-board allowlist to curate.
+- **Stranded-task detection** — a ready task whose assignee never produces a claim within `kanban.stranded_threshold_seconds` (default 30 min) shows up in `pace kanban diagnostics` as a `stranded_in_ready` warning. Severity escalates to error at 2x the threshold and critical at 6x. Catches typo'd assignees, deleted profiles, and down external worker pools in one signal — identity-agnostic, no per-board allowlist to curate.
 
 ## Related
 

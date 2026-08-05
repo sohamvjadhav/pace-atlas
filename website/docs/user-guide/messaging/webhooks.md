@@ -26,8 +26,8 @@ The agent processes the event and can respond by posting comments on PRs, sendin
 
 ## Quick Start
 
-1. Enable via `hermes gateway setup` or environment variables
-2. Define routes in `config.yaml` **or** create them dynamically with `hermes webhook subscribe`
+1. Enable via `pace gateway setup` or environment variables
+2. Define routes in `config.yaml` **or** create them dynamically with `pace webhook subscribe`
 3. Point your service at `http://your-server:8644/webhooks/<route-name>`
 
 ---
@@ -39,14 +39,14 @@ There are two ways to enable the webhook adapter.
 ### Via setup wizard
 
 ```bash
-hermes gateway setup
+pace gateway setup
 ```
 
 Follow the prompts to enable webhooks, set the port, and set a global HMAC secret.
 
 ### Via environment variables
 
-Add to `~/.hermes/.env`:
+Add to `~/.pace/.env`:
 
 ```bash
 WEBHOOK_ENABLED=true
@@ -243,7 +243,7 @@ This walkthrough sets up automatic code review on every pull request.
 
 ### 2. Add the route config
 
-Add the `github-pr` route to your `~/.hermes/config.yaml` as shown in the example above.
+Add the `github-pr` route to your `~/.pace/config.yaml` as shown in the example above.
 
 ### 3. Ensure `gh` CLI is authenticated
 
@@ -366,7 +366,7 @@ Your Supabase edge function signs the payload with HMAC-SHA256 and POSTs to `htt
 ### Example: Dynamic subscription via CLI
 
 ```bash
-hermes webhook subscribe antenna-matches \
+pace webhook subscribe antenna-matches \
   --deliver telegram \
   --deliver-chat-id "123456789" \
   --deliver-only \
@@ -398,12 +398,12 @@ hermes webhook subscribe antenna-matches \
 
 ## Dynamic Subscriptions (CLI) {#dynamic-subscriptions}
 
-In addition to static routes in `config.yaml`, you can create webhook subscriptions dynamically using the `hermes webhook` CLI command. This is especially useful when the agent itself needs to set up event-driven triggers.
+In addition to static routes in `config.yaml`, you can create webhook subscriptions dynamically using the `pace webhook` CLI command. This is especially useful when the agent itself needs to set up event-driven triggers.
 
 ### Create a subscription
 
 ```bash
-hermes webhook subscribe github-issues \
+pace webhook subscribe github-issues \
   --events "issues" \
   --prompt "New issue #{issue.number}: {issue.title}\nBy: {issue.user.login}\n\n{issue.body}" \
   --deliver telegram \
@@ -416,25 +416,25 @@ This returns the webhook URL and an auto-generated HMAC secret. Configure your s
 ### List subscriptions
 
 ```bash
-hermes webhook list
+pace webhook list
 ```
 
 ### Remove a subscription
 
 ```bash
-hermes webhook remove github-issues
+pace webhook remove github-issues
 ```
 
 ### Test a subscription
 
 ```bash
-hermes webhook test github-issues
-hermes webhook test github-issues --payload '{"issue": {"number": 42, "title": "Test"}}'
+pace webhook test github-issues
+pace webhook test github-issues --payload '{"issue": {"number": 42, "title": "Test"}}'
 ```
 
 ### How dynamic subscriptions work
 
-- Subscriptions are stored in `~/.hermes/webhook_subscriptions.json`
+- Subscriptions are stored in `~/.pace/webhook_subscriptions.json`
 - The webhook adapter hot-reloads this file on each incoming request (mtime-gated, negligible overhead)
 - Static routes from `config.yaml` always take precedence over dynamic ones with the same name
 - Dynamic subscriptions use the same route format and capabilities as static routes (events, prompt templates, skills, delivery)
@@ -442,7 +442,7 @@ hermes webhook test github-issues --payload '{"issue": {"number": 42, "title": "
 
 ### Agent-driven subscriptions
 
-The agent can create subscriptions via the terminal tool when guided by the `webhook-subscriptions` skill. Ask the agent to "set up a webhook for GitHub issues" and it will run the appropriate `hermes webhook subscribe` command.
+The agent can create subscriptions via the terminal tool when guided by the `webhook-subscriptions` skill. Ask the agent to "set up a webhook for GitHub issues" and it will run the appropriate `pace webhook subscribe` command.
 
 ---
 
@@ -540,7 +540,7 @@ This is the same trust model that applies to everything the agent reads: web pag
 
 ### Agent not responding
 
-- Run the gateway in foreground to see logs: `hermes gateway run`
+- Run the gateway in foreground to see logs: `pace gateway run`
 - Check that the prompt template is rendering correctly
 - Verify the delivery target is configured and connected
 

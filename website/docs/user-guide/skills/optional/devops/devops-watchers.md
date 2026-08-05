@@ -14,7 +14,7 @@ Poll RSS, JSON APIs, and GitHub with watermark dedup.
 
 | | |
 |---|---|
-| Source | Optional — install with `hermes skills install official/devops/watchers` |
+| Source | Optional — install with `pace skills install official/devops/watchers` |
 | Path | `optional-skills/devops/watchers` |
 | Version | `1.0.0` |
 | Author | Hermes Agent |
@@ -81,7 +81,7 @@ Watch a GitHub repo (set `GITHUB_TOKEN` in `${HERMES_HOME:-~/.hermes}/.env` to a
 
 ```bash
 python $HERMES_HOME/skills/devops/watchers/scripts/watch_github.py \
-  --name hermes-issues --repo NousResearch/hermes-agent --scope issues
+  --name hermes-issues --repo NousResearch/pace-agent --scope issues
 ```
 
 Poll an arbitrary JSON API:

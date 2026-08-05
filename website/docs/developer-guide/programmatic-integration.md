@@ -1,7 +1,7 @@
 ---
 sidebar_position: 8
 title: "Programmatic Integration"
-description: "Three protocols for driving hermes-agent from external programs: ACP, the TUI gateway JSON-RPC, and the OpenAI-compatible HTTP API"
+description: "Three protocols for driving pace-agent from external programs: ACP, the TUI gateway JSON-RPC, and the OpenAI-compatible HTTP API"
 ---
 
 # Programmatic Integration
@@ -20,7 +20,7 @@ All three drive the same `AIAgent` core. They differ only in wire format and whi
 
 ## ACP (Agent Client Protocol)
 
-`hermes acp` starts a stdio JSON-RPC server speaking ACP. Used in production by VS Code (Zed Industries' ACP extension), Zed, and any JetBrains IDE with an ACP plugin.
+`pace acp` starts a stdio JSON-RPC server speaking ACP. Used in production by VS Code (Zed Industries' ACP extension), Zed, and any JetBrains IDE with an ACP plugin.
 
 Capabilities exposed: session creation, prompt submission, streaming agent message chunks, tool-call events, permission requests, session fork, cancel, and authentication. Tool output is rendered into ACP `Diff`/`ToolCall` content blocks the IDE understands.
 
@@ -36,7 +36,7 @@ hermes acp --setup          # interactive provider/model setup for ACP terminal 
 
 ## TUI Gateway JSON-RPC
 
-`tui_gateway/server.py` is the protocol the Ink TUI (`hermes --tui`) and the embedded dashboard PTY bridge talk to. Any external host can speak the same protocol over stdio (or WebSocket via `tui_gateway/ws.py`).
+`tui_gateway/server.py` is the protocol the Ink TUI (`pace --tui`) and the embedded dashboard PTY bridge talk to. Any external host can speak the same protocol over stdio (or WebSocket via `tui_gateway/ws.py`).
 
 ### Method catalog (selected)
 
@@ -62,7 +62,7 @@ terminal.resize         clipboard.paste         image.attach
 
 ### Pi-style RPC mapping
 
-Every command in the Pi-mono RPC spec ([issue #360](https://github.com/NousResearch/hermes-agent/issues/360)) has a TUI-gateway equivalent:
+Every command in the Pi-mono RPC spec ([issue #360](https://github.com/NousResearch/pace-agent/issues/360)) has a TUI-gateway equivalent:
 
 | Pi command | Hermes equivalent |
 |------------|-------------------|
@@ -82,7 +82,7 @@ Every command in the Pi-mono RPC spec ([issue #360](https://github.com/NousResea
 
 ## OpenAI-Compatible API Server
 
-`gateway/platforms/api_server.py` exposes hermes over HTTP for any client that already speaks the OpenAI format. Useful when you want a web frontend, a curl-driven CI runner, or a non-Python consumer.
+`gateway/platforms/api_server.py` exposes pace over HTTP for any client that already speaks the OpenAI format. Useful when you want a web frontend, a curl-driven CI runner, or a non-Python consumer.
 
 Endpoints:
 
@@ -146,7 +146,7 @@ Mid-session model switching works on every surface — it's the `/model` slash c
 - **ACP:** the IDE sends the slash command as a prompt; the agent dispatches it
 - **API server:** include a `model` field in the request body
 
-Provider-aware resolution (the same model name picks the right format for whatever provider you're on) is built in. See `hermes_cli/model_switch.py`.
+Provider-aware resolution (the same model name picks the right format for whatever provider you're on) is built in. See `pace_cli/model_switch.py`.
 
 ---
 

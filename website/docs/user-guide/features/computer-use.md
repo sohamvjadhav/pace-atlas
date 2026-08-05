@@ -46,7 +46,7 @@ installer:
 **Option 1: dedicated CLI command (most direct).**
 
 ```
-hermes computer-use install
+pace computer-use install
 ```
 
 This fetches and runs the upstream cua-driver installer — `install.sh`

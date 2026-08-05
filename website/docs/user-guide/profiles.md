@@ -15,7 +15,7 @@ When you create a profile, it automatically becomes its own command. Create a pr
 ## Quick start
 
 ```bash
-hermes profile create coder       # creates profile + "coder" command alias
+pace profile create coder       # creates profile + "coder" command alias
 coder setup                       # configure API keys and model
 coder chat                        # start chatting
 ```
@@ -25,13 +25,13 @@ That's it. `coder` is now its own Hermes profile with its own config, memory, an
 ## Creating a profile
 
 :::tip
-Quickest setup: run `hermes setup --portal` inside the new profile to wire up models + tools at once. See [Nous Portal](/integrations/nous-portal).
+Quickest setup: run `pace setup --portal` inside the new profile to wire up models + tools at once. See [Nous Portal](/integrations/nous-portal).
 :::
 
 ### Blank profile
 
 ```bash
-hermes profile create mybot
+pace profile create mybot
 ```
 
 Creates a fresh profile with bundled skills seeded. Run `mybot setup` to configure API keys, model, and gateway tokens.
@@ -39,15 +39,15 @@ Creates a fresh profile with bundled skills seeded. Run `mybot setup` to configu
 If you plan to use this profile as a kanban worker (or want the kanban orchestrator to route work to it), pass `--description "<role>"` at create time so the orchestrator knows what it's good at:
 
 ```bash
-hermes profile create researcher --description "Reads source code and external docs, writes findings."
+pace profile create researcher --description "Reads source code and external docs, writes findings."
 ```
 
-You can also set or auto-generate the description later with `hermes profile describe` — see the [Kanban guide](./features/kanban#auto-vs-manual-orchestration) for the full routing model.
+You can also set or auto-generate the description later with `pace profile describe` — see the [Kanban guide](./features/kanban#auto-vs-manual-orchestration) for the full routing model.
 
 ### Clone config only (`--clone`)
 
 ```bash
-hermes profile create work --clone
+pace profile create work --clone
 ```
 
 Copies your current profile's `config.yaml`, `.env`, `SOUL.md`, and skills into the new profile. Same API keys, model, and capabilities, but fresh sessions and memory. Edit `~/.hermes/profiles/work/.env` for different API keys, or `~/.hermes/profiles/work/SOUL.md` for a different personality.
@@ -55,7 +55,7 @@ Copies your current profile's `config.yaml`, `.env`, `SOUL.md`, and skills into 
 ### Clone everything (`--clone-all`)
 
 ```bash
-hermes profile create backup --clone-all
+pace profile create backup --clone-all
 ```
 
 Copies **everything** — config, API keys, personality, all memories, skills, cron jobs, plugins. A complete working snapshot. Per-profile history is excluded (session history, `state.db`, `backups/`, `state-snapshots/`, `checkpoints/`) — these belong to the source profile and can reach tens of GB. For a full backup including history, use `hermes profile export` or `hermes backup` instead.
@@ -91,28 +91,28 @@ coder skills list             # list coder's skills
 coder config set model.default anthropic/claude-sonnet-4
 ```
 
-The alias works with every hermes subcommand — it's just `hermes -p <name>` under the hood.
+The alias works with every pace subcommand — it's just `pace -p <name>` under the hood.
 
 ### The `-p` flag
 
 You can also target a profile explicitly with any command:
 
 ```bash
-hermes -p coder chat
-hermes --profile=coder doctor
-hermes chat -p coder -q "hello"    # works in any position
+pace -p coder chat
+pace --profile=coder doctor
+pace chat -p coder -q "hello"    # works in any position
 ```
 
-### Sticky default (`hermes profile use`)
+### Sticky default (`pace profile use`)
 
 ```bash
-hermes profile use coder
-hermes chat                   # now targets coder
-hermes tools                  # configures coder's tools
-hermes profile use default    # switch back
+pace profile use coder
+pace chat                   # now targets coder
+pace tools                  # configures coder's tools
+pace profile use default    # switch back
 ```
 
-Sets a default so plain `hermes` commands target that profile. Like `kubectl config use-context`.
+Sets a default so plain `pace` commands target that profile. Like `kubectl config use-context`.
 
 ### Knowing where you are
 
@@ -120,7 +120,7 @@ The CLI always shows which profile is active:
 
 - **Prompt**: `coder ❯` instead of `❯`
 - **Banner**: Shows `Profile: coder` on startup
-- **`hermes profile`**: Shows current profile name, path, model, gateway status
+- **`pace profile`**: Shows current profile name, path, model, gateway status
 
 ## Profiles vs workspaces vs sandboxing
 
@@ -163,10 +163,10 @@ Each profile has its own `.env` file. Configure a different Telegram/Discord/Sla
 
 ```bash
 # Edit coder's tokens
-nano ~/.hermes/profiles/coder/.env
+nano ~/.pace/profiles/coder/.env
 
 # Edit assistant's tokens
-nano ~/.hermes/profiles/assistant/.env
+nano ~/.pace/profiles/assistant/.env
 ```
 
 ### Safety: token locks
@@ -183,7 +183,7 @@ assistant gateway install     # creates hermes-gateway-assistant service
 Each profile gets its own service name. They run independently.
 
 :::note Inside the official Docker image
-Per-profile gateways are supervised by [s6-overlay](https://github.com/just-containers/s6-overlay) (PID 1 in the container), so `hermes profile create <name>` automatically registers an s6 service slot at `/run/service/gateway-<name>/`. `hermes -p <name> gateway start/stop/restart` dispatches to `s6-svc` instead of spawning a bare process — crashes are auto-restarted and `docker restart` preserves the previously-running set of gateways. See [Per-profile gateway supervision](/user-guide/docker#per-profile-gateway-supervision) for details.
+Per-profile gateways are supervised by [s6-overlay](https://github.com/just-containers/s6-overlay) (PID 1 in the container), so `pace profile create <name>` automatically registers an s6 service slot at `/run/service/gateway-<name>/`. `pace -p <name> gateway start/stop/restart` dispatches to `s6-svc` instead of spawning a bare process — crashes are auto-restarted and `docker restart` preserves the previously-running set of gateways. See [Per-profile gateway supervision](/user-guide/docker#per-profile-gateway-supervision) for details.
 :::
 
 ## Configuring profiles
@@ -196,7 +196,7 @@ Each profile has its own:
 
 ```bash
 coder config set model.default anthropic/claude-sonnet-4
-echo "You are a focused coding assistant." > ~/.hermes/profiles/coder/SOUL.md
+echo "You are a focused coding assistant." > ~/.pace/profiles/coder/SOUL.md
 ```
 
 If you want this profile to work in a specific project by default, also set its own `terminal.cwd`:
@@ -221,10 +221,10 @@ to edit a profile from the dashboard, use the switcher instead.
 
 ## Updating
 
-`hermes update` pulls code once (shared) and syncs new bundled skills to **all** profiles automatically:
+`pace update` pulls code once (shared) and syncs new bundled skills to **all** profiles automatically:
 
 ```bash
-hermes update
+pace update
 # → Code updated (12 commits)
 # → Skills synced: default (up to date), coder (+2 new), assistant (+2 new)
 ```
@@ -234,42 +234,42 @@ User-modified skills are never overwritten.
 ## Managing profiles
 
 ```bash
-hermes profile list           # show all profiles with status
-hermes profile show coder     # detailed info for one profile
-hermes profile rename coder dev-bot   # rename (updates alias + service)
-hermes profile export coder   # export to coder.tar.gz
-hermes profile import coder.tar.gz   # import from archive
+pace profile list           # show all profiles with status
+pace profile show coder     # detailed info for one profile
+pace profile rename coder dev-bot   # rename (updates alias + service)
+pace profile export coder   # export to coder.tar.gz
+pace profile import coder.tar.gz   # import from archive
 ```
 
 ## Deleting a profile
 
 ```bash
-hermes profile delete coder
+pace profile delete coder
 ```
 
 This stops the gateway, removes the systemd/launchd service, removes the command alias, and deletes all profile data. You'll be asked to type the profile name to confirm.
 
-Use `--yes` to skip confirmation: `hermes profile delete coder --yes`
+Use `--yes` to skip confirmation: `pace profile delete coder --yes`
 
 :::note
-You cannot delete the default profile (`~/.hermes`). To remove everything, use `hermes uninstall`.
+You cannot delete the default profile (`~/.pace`). To remove everything, use `pace uninstall`.
 :::
 
 ## Tab completion
 
 ```bash
 # Bash
-eval "$(hermes completion bash)"
+eval "$(pace completion bash)"
 
 # Zsh
-eval "$(hermes completion zsh)"
+eval "$(pace completion zsh)"
 ```
 
 Add the line to your `~/.bashrc` or `~/.zshrc` for persistent completion. Completes profile names after `-p`, profile subcommands, and top-level commands.
 
 ## How it works
 
-Profiles use the `HERMES_HOME` environment variable. When you run `coder chat`, the wrapper script sets `HERMES_HOME=~/.hermes/profiles/coder` before launching hermes. Since 119+ files in the codebase resolve paths via `get_hermes_home()`, Hermes state automatically scopes to the profile's directory — config, sessions, memory, skills, state database, gateway PID, logs, and cron jobs.
+Profiles use the `HERMES_HOME` environment variable. When you run `coder chat`, the wrapper script sets `HERMES_HOME=~/.pace/profiles/coder` before launching pace. Since 119+ files in the codebase resolve paths via `get_hermes_home()`, Hermes state automatically scopes to the profile's directory — config, sessions, memory, skills, state database, gateway PID, logs, and cron jobs.
 
 This is separate from terminal working directory. Tool execution starts from `terminal.cwd` (or the launch directory when `cwd: "."` on the local backend), not automatically from `HERMES_HOME`.
 
@@ -307,10 +307,10 @@ A profile you built on one machine can be packaged as a **git repository** and i
 
 ```bash
 # Install a whole agent from a git repo
-hermes profile install github.com/you/research-bot --alias
+pace profile install github.com/you/research-bot --alias
 
 # Update later when the author ships a new version (keeps your memories + .env)
-hermes profile update research-bot
+pace profile update research-bot
 ```
 
 See **[Profile Distributions: Share a Whole Agent](./profile-distributions.md)** for the full guide — authoring, publishing, update semantics, security model, and use cases.

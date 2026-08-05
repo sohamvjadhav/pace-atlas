@@ -9,7 +9,7 @@ description: "Text-to-speech and voice message transcription across all platform
 Hermes Agent supports both text-to-speech output and voice message transcription across all messaging platforms.
 
 :::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, OpenAI TTS is available through the **[Tool Gateway](tool-gateway.md)** without a separate OpenAI API key. New installs can run `hermes setup --portal` to log in and turn on every gateway tool at once; existing installs can pick **Nous Subscription** for just TTS via `hermes model` or `hermes tools`.
+If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, OpenAI TTS is available through the **[Tool Gateway](tool-gateway.md)** without a separate OpenAI API key. New installs can run `pace setup --portal` to log in and turn on every gateway tool at once; existing installs can pick **Nous Subscription** for just TTS via `pace model` or `pace tools`.
 :::
 
 ## Text-to-Speech
@@ -37,12 +37,12 @@ Convert text to speech with eleven providers:
 | Telegram | Voice bubble (plays inline) | Opus `.ogg` |
 | Discord | Voice bubble (Opus/OGG), falls back to file attachment | Opus/MP3 |
 | WhatsApp | Audio file attachment | MP3 |
-| CLI | Saved to `~/.hermes/audio_cache/` | MP3 |
+| CLI | Saved to `~/.pace/audio_cache/` | MP3 |
 
 ### Configuration
 
 ```yaml
-# In ~/.hermes/config.yaml
+# In ~/.pace/config.yaml
 tts:
   provider: "edge"              # "edge" | "elevenlabs" | "openai" | "minimax" | "mistral" | "gemini" | "xai" | "deepinfra" | "neutts" | "kittentts" | "piper"
   speed: 1.0                    # Global speed multiplier (provider-specific settings override this)
@@ -96,7 +96,7 @@ tts:
     clean_text: true                            # Expand numbers, currencies, units
   piper:
     voice: en_US-lessac-medium                  # voice name (auto-downloaded) OR absolute path to .onnx
-    # voices_dir: ''                            # default: ~/.hermes/cache/piper-voices/
+    # voices_dir: ''                            # default: ~/.pace/cache/piper-voices/
     # use_cuda: false                           # requires onnxruntime-gpu
     # length_scale: 1.0                         # 2.0 = twice as slow
     # noise_scale: 0.667
@@ -231,7 +231,7 @@ See the [xAI Custom Voices docs](https://docs.x.ai/developers/model-capabilities
 
 Piper is a fast, local neural TTS engine from the Open Home Foundation (the Home Assistant maintainers). It runs entirely on CPU, supports **44 languages** with pre-trained voices, and needs no API key.
 
-**Install via `hermes tools`** → Voice & TTS → Piper — Hermes runs `pip install piper-tts` for you. Or install manually: `pip install piper-tts`.
+**Install via `pace tools`** → Voice & TTS → Piper — Hermes runs `pip install piper-tts` for you. Or install manually: `pip install piper-tts`.
 
 **Switch to Piper:**
 
@@ -242,7 +242,7 @@ tts:
     voice: en_US-lessac-medium
 ```
 
-On the first TTS call for a voice that isn't cached locally, Hermes runs `python -m piper.download_voices <name>` and downloads the model (~20-90MB depending on quality tier) into `~/.hermes/cache/piper-voices/`. Subsequent calls reuse the cached model.
+On the first TTS call for a voice that isn't cached locally, Hermes runs `python -m piper.download_voices <name>` and downloads the model (~20-90MB depending on quality tier) into `~/.pace/cache/piper-voices/`. Subsequent calls reuse the cached model.
 
 **Picking a voice.** The [full voice catalog](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/VOICES.md) covers English, Spanish, French, German, Italian, Dutch, Portuguese, Russian, Polish, Turkish, Chinese, Arabic, Hindi, and more — each with `x_low` / `low` / `medium` / `high` quality tiers. Sample voices at [rhasspy.github.io/piper-samples](https://rhasspy.github.io/piper-samples/).
 
@@ -373,14 +373,14 @@ For TTS engines that can't be expressed as a single shell command — Python SDK
 | Two or three CLIs chained with shell pipes | **Command provider** |
 | A Python SDK only — no CLI | **Plugin** |
 | Streaming bytes you want to deliver chunked (mid-generation voice bubbles) | **Plugin** (override `stream()`) |
-| A voice-listing API used by `hermes setup` | **Plugin** (override `list_voices()`) |
+| A voice-listing API used by `pace setup` | **Plugin** (override `list_voices()`) |
 | OAuth refresh flow (not a static bearer token) | **Plugin** |
 
 Built-ins always win, and command providers win over a same-name plugin — so plugins are safe to register against any non-built-in name without worrying about shadowing your existing config.
 
 #### Minimal plugin
 
-Drop this in `~/.hermes/plugins/my-tts/`:
+Drop this in `~/.pace/plugins/my-tts/`:
 
 `plugin.yaml`:
 ```yaml
@@ -426,15 +426,15 @@ def register(ctx):
     ctx.register_tts_provider(MyTTSProvider())
 ```
 
-Enable it (`hermes plugins enable my-tts`), point `tts.provider` at it (`tts.provider: my-tts` in `config.yaml`), and the `text_to_speech` tool will route through your plugin.
+Enable it (`pace plugins enable my-tts`), point `tts.provider` at it (`tts.provider: my-tts` in `config.yaml`), and the `text_to_speech` tool will route through your plugin.
 
 #### Optional hooks
 
 Override these on your provider class for richer integration:
 
-- `list_voices()` → list of `{id, display, language, gender, preview_url}` dicts shown in `hermes tools`.
+- `list_voices()` → list of `{id, display, language, gender, preview_url}` dicts shown in `pace tools`.
 - `list_models()` → list of `{id, display, languages, max_text_length}` dicts.
-- `get_setup_schema()` → return `{name, badge, tag, env_vars: [{key, prompt, url}]}` to power the picker row in `hermes tools` / `hermes setup`. Without this, the plugin still works but its row in the picker is minimal.
+- `get_setup_schema()` → return `{name, badge, tag, env_vars: [{key, prompt, url}]}` to power the picker row in `pace tools` / `pace setup`. Without this, the plugin still works but its row in the picker is minimal.
 - `stream(text, *, voice, model, format, **extra)` → iterator yielding audio bytes for streaming delivery (default raises `NotImplementedError`).
 - `voice_compatible` property → set `True` if your output is Opus-compatible and the gateway should deliver it as a voice bubble (default `False` = regular audio attachment).
 
@@ -457,7 +457,7 @@ Local transcription works out of the box when `faster-whisper` is installed. If 
 ### Configuration
 
 ```yaml
-# In ~/.hermes/config.yaml
+# In ~/.pace/config.yaml
 stt:
   provider: "local"           # "local" | "groq" | "openai" | "mistral" | "xai" | "elevenlabs" | "deepinfra"
   language: "en"              # Global language hint applied to every provider unless a per-provider language overrides it; set "" to restore auto-detect
@@ -649,7 +649,7 @@ The dispatcher forwards `model` and `language` from this section; everything els
 
 #### Minimal plugin
 
-Drop this in `~/.hermes/plugins/my-stt/`:
+Drop this in `~/.pace/plugins/my-stt/`:
 
 `plugin.yaml`:
 ```yaml
@@ -705,7 +705,7 @@ def register(ctx):
     ctx.register_transcription_provider(MySTTProvider())
 ```
 
-Enable it (`hermes plugins enable my-stt`), set `stt.provider: my-stt` in `config.yaml`, and voice-message transcription will route through your plugin.
+Enable it (`pace plugins enable my-stt`), set `stt.provider: my-stt` in `config.yaml`, and voice-message transcription will route through your plugin.
 
 #### Optional hooks
 
@@ -713,6 +713,6 @@ Override these on your provider class for richer integration:
 
 - `list_models()` → list of `{id, display, languages, max_audio_seconds}` dicts.
 - `default_model()` → string returned when the user doesn't override the model.
-- `get_setup_schema()` → return `{name, badge, tag, env_vars: [{key, prompt, url}]}` to power picker rows in `hermes tools` / `hermes setup` (the picker category for STT is not yet shipped — this metadata is available to plugins for forward compatibility).
+- `get_setup_schema()` → return `{name, badge, tag, env_vars: [{key, prompt, url}]}` to power picker rows in `pace tools` / `pace setup` (the picker category for STT is not yet shipped — this metadata is available to plugins for forward compatibility).
 
 See `agent/transcription_provider.py` for the full ABC including docstrings.

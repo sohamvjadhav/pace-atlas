@@ -204,7 +204,7 @@ Member IDs look like `U01ABC2DEF3`. You need your own Member ID at minimum.
 
 ## Step 8: Configure Hermes
 
-Add the following to your `~/.hermes/.env` file:
+Add the following to your `~/.pace/.env` file:
 
 ```bash
 # Required
@@ -220,15 +220,15 @@ SLACK_HOME_CHANNEL_NAME=general              # Human-readable name for the home 
 Or run the interactive setup:
 
 ```bash
-hermes gateway setup    # Select Slack when prompted
+pace gateway setup    # Select Slack when prompted
 ```
 
 Then start the gateway:
 
 ```bash
-hermes gateway              # Foreground
-hermes gateway install      # Install as a user service
-sudo hermes gateway install --system   # Linux only: boot-time system service
+pace gateway              # Foreground
+pace gateway install      # Install as a user service
+sudo pace gateway install --system   # Linux only: boot-time system service
 ```
 
 :::tip Codex reasoning-effort safety
@@ -260,7 +260,7 @@ Hermes command with its description.
 
 Under the hood: Hermes ships with a generated Slack app manifest (see
 Step 1, Option A) that declares every command in
-[`COMMAND_REGISTRY`](https://github.com/NousResearch/hermes-agent/blob/main/hermes_cli/commands.py)
+[`COMMAND_REGISTRY`](https://github.com/NousResearch/pace-agent/blob/main/pace_cli/commands.py)
 as a slash command. In Socket Mode, Slack routes the command event
 through the WebSocket regardless of the manifest's `url` field.
 
@@ -283,26 +283,26 @@ channel's history.
 
 ### Refreshing slash commands after updates
 
-When Hermes adds new commands (e.g. after `hermes update`), regenerate
+When Hermes adds new commands (e.g. after `pace update`), regenerate
 the manifest and update your Slack app:
 
 ```bash
-hermes slack manifest --write
+pace slack manifest --write
 ```
 
 Then in Slack:
 1. Open [https://api.slack.com/apps](https://api.slack.com/apps) →
    your Hermes app
 2. **Features → App Manifest → Edit**
-3. Paste the new contents of `~/.hermes/slack-manifest.json`
+3. Paste the new contents of `~/.pace/slack-manifest.json`
 4. **Save**. Slack will prompt to reinstall the app if scopes or slash
    commands changed.
 
-### Legacy `/hermes <subcommand>` still works
+### Legacy `/pace <subcommand>` still works
 
 For backward compatibility with older manifests, you can still type
-`/hermes btw run the tests` — Hermes routes it the same way as `/btw
-run the tests`. Free-form questions also work: `/hermes what's the
+`/pace btw run the tests` — Hermes routes it the same way as `/btw
+run the tests`. Free-form questions also work: `/pace what's the
 weather?` is treated as a regular message.
 
 ### Using commands inside threads (the `!cmd` prefix)
@@ -360,7 +360,7 @@ If you maintain your Slack manifest by hand and just want the slash
 command list:
 
 ```bash
-hermes slack manifest --slashes-only > /tmp/slashes.json
+pace slack manifest --slashes-only > /tmp/slashes.json
 ```
 
 Paste that array into the `features.slash_commands` key of your
@@ -386,7 +386,7 @@ In channels, always @mention the bot to start a conversation. Once the bot is ac
 
 ## Configuration Options
 
-Beyond the required environment variables from Step 8, you can customize Slack bot behavior through `~/.hermes/config.yaml`.
+Beyond the required environment variables from Step 8, you can customize Slack bot behavior through `~/.pace/config.yaml`.
 
 ### Thread & Reply Behavior
 
@@ -573,8 +573,8 @@ slack:
   # Custom mention patterns that trigger the bot
   # (in addition to the default @mention detection)
   mention_patterns:
-    - "hey hermes"
-    - "hermes,"
+    - "hey pace"
+    - "pace,"
 
   # Text prepended to every outgoing message
   reply_prefix: ""
@@ -839,7 +839,7 @@ SLACK_BOT_TOKEN=xoxb-workspace1-token,xoxb-workspace2-token,xoxb-workspace3-toke
 SLACK_APP_TOKEN=xapp-your-app-token
 ```
 
-Or in `~/.hermes/config.yaml`:
+Or in `~/.pace/config.yaml`:
 
 ```yaml
 platforms:
@@ -852,7 +852,7 @@ platforms:
 In addition to tokens in the environment or config, Hermes also loads tokens from an **OAuth token file** at:
 
 ```
-~/.hermes/slack_tokens.json
+~/.pace/slack_tokens.json
 ```
 
 This file is a JSON object mapping team IDs to token entries:
@@ -971,7 +971,7 @@ the gateway will **deny all messages** by default as a safety measure. Never sha
 treat them like passwords.
 :::
 
-- Tokens should be stored in `~/.hermes/.env` (file permissions `600`)
+- Tokens should be stored in `~/.pace/.env` (file permissions `600`)
 - Rotate tokens periodically via the Slack app settings
 - Audit who has access to your Hermes config directory
 - Socket Mode means no public endpoint is exposed — one less attack surface

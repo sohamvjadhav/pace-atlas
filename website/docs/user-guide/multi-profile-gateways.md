@@ -25,7 +25,7 @@ be online at the same time. Common reasons:
   memory and skills
 
 Every profile already gets its own per-platform LaunchAgent
-(`ai.hermes.gateway-<name>.plist`) or systemd user service
+(`ai.pace.gateway-<name>.plist`) or systemd user service
 (`hermes-gateway-<name>.service`). This guide adds the patterns for managing
 them collectively.
 
@@ -33,9 +33,9 @@ them collectively.
 
 ```bash
 # Create profiles (once)
-hermes profile create coder
-hermes profile create personal-bot
-hermes profile create research
+pace profile create coder
+pace profile create personal-bot
+pace profile create research
 
 # Configure each
 coder setup
@@ -280,9 +280,9 @@ run_for_profile() {
   profile="$1"
   action="$2"
   if [ "$profile" = "default" ]; then
-    hermes gateway "$action"
+    pace gateway "$action"
   else
-    hermes -p "$profile" gateway "$action"
+    pace -p "$profile" gateway "$action"
   fi
 }
 
@@ -295,7 +295,7 @@ case "$action" in
     done
     ;;
   list)
-    hermes gateway list
+    pace gateway list
     ;;
   *)
     usage
@@ -311,12 +311,12 @@ hermes-gateways start      # start every configured profile
 hermes-gateways stop       # stop every configured profile
 hermes-gateways restart    # restart all
 hermes-gateways status     # status across all
-hermes-gateways list       # delegates to `hermes gateway list`
+hermes-gateways list       # delegates to `pace gateway list`
 ```
 
 :::tip
-The `default` profile is targeted with `hermes gateway <action>` (no `-p`),
-not `hermes -p default gateway <action>`. The wrapper above handles both forms.
+The `default` profile is targeted with `pace gateway <action>` (no `-p`),
+not `pace -p default gateway <action>`. The wrapper above handles both forms.
 :::
 
 ## Manage one profile
@@ -333,7 +333,7 @@ coder gateway install    # create the LaunchAgent / systemd unit
 coder gateway uninstall  # remove the service file
 ```
 
-These are equivalent to `hermes -p coder gateway <action>` — useful if a
+These are equivalent to `pace -p coder gateway <action>` — useful if a
 profile alias is not on `PATH` or if you target profiles dynamically from a
 script.
 
@@ -344,10 +344,10 @@ never clash:
 
 | Platform | Path                                                              |
 | -------- | ----------------------------------------------------------------- |
-| macOS    | `~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist`        |
+| macOS    | `~/Library/LaunchAgents/ai.pace.gateway-<profile>.plist`        |
 | Linux    | `~/.config/systemd/user/hermes-gateway-<profile>.service`         |
 
-The default profile keeps the historical names: `ai.hermes.gateway.plist` /
+The default profile keeps the historical names: `ai.pace.gateway.plist` /
 `hermes-gateway.service`.
 
 ## Viewing logs
@@ -356,18 +356,18 @@ Each profile writes to its own log files:
 
 ```bash
 # Default profile
-tail -f ~/.hermes/logs/gateway.log
-tail -f ~/.hermes/logs/gateway.error.log
+tail -f ~/.pace/logs/gateway.log
+tail -f ~/.pace/logs/gateway.error.log
 
 # Named profile
-tail -f ~/.hermes/profiles/<name>/logs/gateway.log
-tail -f ~/.hermes/profiles/<name>/logs/gateway.error.log
+tail -f ~/.pace/profiles/<name>/logs/gateway.log
+tail -f ~/.pace/profiles/<name>/logs/gateway.error.log
 ```
 
 Stream every profile's log simultaneously:
 
 ```bash
-tail -f ~/.hermes/logs/gateway.log ~/.hermes/profiles/*/logs/gateway.log
+tail -f ~/.pace/logs/gateway.log ~/.pace/profiles/*/logs/gateway.log
 ```
 
 The CLI also has a structured log viewer:
@@ -381,9 +381,9 @@ hermes logs --help              # filters, levels, JSON output
 ## Identify what's actually running
 
 ```bash
-hermes profile list             # profiles + model + gateway state
+pace profile list             # profiles + model + gateway state
 hermes-gateways status          # full status across every profile
-launchctl list | grep hermes    # macOS — PIDs and labels
+launchctl list | grep pace    # macOS — PIDs and labels
 systemctl --user list-units 'hermes-gateway-*'   # Linux — units
 ```
 
@@ -392,18 +392,18 @@ systemctl --user list-units 'hermes-gateway-*'   # Linux — units
 Every profile keeps its config inside its own directory:
 
 ```
-~/.hermes/profiles/<name>/
+~/.pace/profiles/<name>/
 ├── .env              # API keys, bot tokens (chmod 600)
 ├── config.yaml       # model, provider, toolsets, gateway settings
 └── SOUL.md           # personality / system prompt
 ```
 
-The default profile uses `~/.hermes/` directly with the same three files.
+The default profile uses `~/.pace/` directly with the same three files.
 
 Edit them with any editor or via the CLI:
 
 ```bash
-hermes config set model.model anthropic/claude-sonnet-4    # default profile
+pace config set model.model anthropic/claude-sonnet-4    # default profile
 coder config set model.model openai/gpt-5                  # named profile
 ```
 
@@ -427,7 +427,7 @@ to sleep when idle. Two patterns:
 ```bash
 caffeinate -dis                    # block display, idle, and system sleep
 caffeinate -dis -t 28800           # same, auto-exit after 8 hours
-caffeinate -i -w $(cat ~/.hermes/gateway.pid) &   # awake while default gateway runs
+caffeinate -i -w $(cat ~/.pace/gateway.pid) &   # awake while default gateway runs
 
 # Persistent: run in background and forget
 nohup caffeinate -dis >/dev/null 2>&1 &
@@ -458,7 +458,7 @@ use a third-party tool.
 
 ```bash
 # Inhibit suspend while a command runs
-systemd-inhibit --what=idle:sleep --who=hermes --why="gateways running" \
+systemd-inhibit --what=idle:sleep --who=pace --why="gateways running" \
   sleep infinity &
 
 # Allow user services to keep running after logout (recommended)
@@ -479,16 +479,16 @@ To audit:
 
 ```bash
 grep -H 'TELEGRAM_BOT_TOKEN\|DISCORD_BOT_TOKEN' \
-     ~/.hermes/.env ~/.hermes/profiles/*/.env
+     ~/.pace/.env ~/.pace/profiles/*/.env
 ```
 
 ## Updating the code
 
-`hermes update` pulls the latest code once and syncs new bundled skills into
+`pace update` pulls the latest code once and syncs new bundled skills into
 every profile:
 
 ```bash
-hermes update
+pace update
 hermes-gateways restart
 ```
 
@@ -498,7 +498,7 @@ User-modified skills are never overwritten.
 
 ### "Could not find service in domain for user gui: 501"
 
-You ran `hermes gateway start` after a previous `hermes gateway stop`. The
+You ran `pace gateway start` after a previous `pace gateway stop`. The
 CLI's `stop` does a full `launchctl unload`, which removes the service from
 launchd's registry. The CLI catches this specific error on `start` and
 automatically re-loads the plist (`↻ launchd job was unloaded; reloading
@@ -509,8 +509,8 @@ service definition`). The service starts normally. Nothing to fix.
 If a profile's gateway shows `not running` but a process is still alive:
 
 ```bash
-ps -ef | grep "hermes_cli.*-p <profile>"
-cat ~/.hermes/profiles/<profile>/gateway.pid
+ps -ef | grep "pace_cli.*-p <profile>"
+cat ~/.pace/profiles/<profile>/gateway.pid
 kill -TERM <pid>          # graceful
 kill -KILL <pid>          # if that fails after a few seconds
 <profile> gateway start
@@ -520,8 +520,8 @@ kill -KILL <pid>          # if that fails after a few seconds
 
 ```bash
 # macOS
-launchctl unload ~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist
-launchctl load   ~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist
+launchctl unload ~/Library/LaunchAgents/ai.pace.gateway-<profile>.plist
+launchctl load   ~/Library/LaunchAgents/ai.pace.gateway-<profile>.plist
 
 # Linux
 systemctl --user restart hermes-gateway-<profile>.service
@@ -530,6 +530,6 @@ systemctl --user restart hermes-gateway-<profile>.service
 ### Health check
 
 ```bash
-hermes doctor                  # default profile
-hermes -p <profile> doctor     # one profile
+pace doctor                  # default profile
+pace -p <profile> doctor     # one profile
 ```

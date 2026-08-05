@@ -30,9 +30,9 @@ Hermes has several distinct pluggable interfaces — some use Python `register_*
 | A **TTS backend** (any CLI — Piper, VoxCPM, Kokoro, voice cloning, …) | [TTS custom command providers](/user-guide/features/tts#custom-command-providers) — config-driven, no Python needed |
 | An **STT backend** (custom whisper / ASR CLI) | [Voice Message Transcription](/user-guide/features/tts#voice-message-transcription-stt) — set `HERMES_LOCAL_STT_COMMAND` to an argv-tokenized template |
 | **External tools via MCP** (filesystem, GitHub, Linear, any MCP server) | [MCP](/user-guide/features/mcp) — declare `mcp_servers.<name>` in `config.yaml` |
-| **Gateway event hooks** (fire on startup, session events, commands) | [Event Hooks](/user-guide/features/hooks#gateway-event-hooks) — drop `HOOK.yaml` + `handler.py` into `~/.hermes/hooks/<name>/` |
+| **Gateway event hooks** (fire on startup, session events, commands) | [Event Hooks](/user-guide/features/hooks#gateway-event-hooks) — drop `HOOK.yaml` + `handler.py` into `~/.pace/hooks/<name>/` |
 | **Shell hooks** (run a shell command on events) | [Shell Hooks](/user-guide/features/hooks#shell-hooks) — declare under `hooks:` in `config.yaml` |
-| **Additional skill sources** (custom GitHub repos, private skill indexes) | [Skills](/user-guide/features/skills) — `hermes skills tap add <repo>` · [Publishing a tap](/user-guide/features/skills#publishing-a-custom-skill-tap) |
+| **Additional skill sources** (custom GitHub repos, private skill indexes) | [Skills](/user-guide/features/skills) — `pace skills tap add <repo>` · [Publishing a tap](/user-guide/features/skills#publishing-a-custom-skill-tap) |
 | A first-class **core** inference provider (not a plugin) | [Adding Providers](/developer-guide/adding-providers) |
 
 See the full [Pluggable interfaces table](/user-guide/features/plugins#pluggable-interfaces--where-to-go-for-each) for a consolidated view of every extension surface including config-driven (TTS, STT, MCP, shell hooks) and drop-in directory (gateway hooks) styles.
@@ -53,8 +53,8 @@ Plus a hook that logs every tool call, and a bundled skill file.
 ## Step 1: Create the plugin directory
 
 ```bash
-mkdir -p ~/.hermes/plugins/calculator
-cd ~/.hermes/plugins/calculator
+mkdir -p ~/.pace/plugins/calculator
+cd ~/.pace/plugins/calculator
 ```
 
 ## Step 2: Write the manifest
@@ -274,7 +274,7 @@ def register(ctx):
 - Called exactly once at startup
 - `ctx.register_tool()` puts your tool in the registry — the model sees it immediately
 - `ctx.register_hook()` subscribes to lifecycle events
-- `ctx.register_cli_command()` registers a CLI subcommand (e.g. `hermes my-plugin <subcommand>`)
+- `ctx.register_cli_command()` registers a CLI subcommand (e.g. `pace my-plugin <subcommand>`)
 - `ctx.register_command()` registers an in-session slash command (e.g. `/myplugin <args>` inside CLI / gateway chat) — see [Register slash commands](#register-slash-commands) below
 - `ctx.dispatch_tool(name, arguments)` — call any other tool (built-in or from another plugin) with the parent agent's context (approvals, credentials, task_id) wired up automatically. Useful from slash-command handlers that need to invoke `terminal`, `read_file`, or any other tool as if the model had called it directly.
 - If this function crashes, the plugin is disabled but Hermes continues fine
@@ -303,7 +303,7 @@ The dispatched tool goes through the normal approval, redaction, and budget pipe
 Start Hermes:
 
 ```bash
-hermes
+pace
 ```
 
 You should see `calculator: calculate, unit_convert` in the banner's tool list.
@@ -332,7 +332,7 @@ Plugins (1):
 If your plugin doesn't show up — or shows up but isn't loading — set `HERMES_PLUGINS_DEBUG=1` to get verbose discovery logs on stderr:
 
 ```bash
-HERMES_PLUGINS_DEBUG=1 hermes plugins list
+HERMES_PLUGINS_DEBUG=1 pace plugins list
 ```
 
 You'll see, for every plugin source (bundled, user, project, entry-points):
@@ -344,23 +344,23 @@ You'll see, for every plugin source (bundled, user, project, entry-points):
 - on parse failure: a full traceback for the exception (YAML scanner errors, etc.)
 - on `register()` failure: a full traceback pointing at the line in your `__init__.py` that raised
 
-The same logs are always written to `~/.hermes/logs/agent.log` at WARNING level (failures only) and DEBUG level (everything) when the env var is set. So if you can't run with the env var (e.g. from inside the gateway), tail the log file instead:
+The same logs are always written to `~/.pace/logs/agent.log` at WARNING level (failures only) and DEBUG level (everything) when the env var is set. So if you can't run with the env var (e.g. from inside the gateway), tail the log file instead:
 
 ```bash
-hermes logs --level WARNING | grep -i plugin
+pace logs --level WARNING | grep -i plugin
 ```
 
 Common reasons a plugin doesn't appear:
 
-- **Not enabled in config** — plugins are opt-in. Run `hermes plugins enable <name>` (the name comes from the `plugins list` output, which can be `<category>/<plugin>` for nested layouts).
-- **Wrong directory layout** — must be `~/.hermes/plugins/<plugin-name>/plugin.yaml` (flat) or `~/.hermes/plugins/<category>/<plugin-name>/plugin.yaml` (one level of category nesting, max). Anything deeper is ignored.
+- **Not enabled in config** — plugins are opt-in. Run `pace plugins enable <name>` (the name comes from the `plugins list` output, which can be `<category>/<plugin>` for nested layouts).
+- **Wrong directory layout** — must be `~/.pace/plugins/<plugin-name>/plugin.yaml` (flat) or `~/.pace/plugins/<category>/<plugin-name>/plugin.yaml` (one level of category nesting, max). Anything deeper is ignored.
 - **Missing `__init__.py`** — the plugin directory needs both `plugin.yaml` and `__init__.py` with a `register(ctx)` function.
 - **Wrong `kind`** — gateway adapters need `kind: platform` in their manifest. Memory providers are auto-detected as `kind: exclusive` and routed through the `memory.provider` config instead of `plugins.enabled`.
 
 ## Your plugin's final structure
 
 ```
-~/.hermes/plugins/calculator/
+~/.pace/plugins/calculator/
 ├── plugin.yaml      # "I'm calculator, I provide tools and hooks"
 ├── __init__.py      # Wiring: schemas → handlers, register hooks
 ├── schemas.py       # What the LLM reads (descriptions + parameter specs)
@@ -395,7 +395,7 @@ with open(_DATA_FILE) as f:
 Plugins can ship skill files that the agent loads via `skill_view("plugin:skill")`. Register them in your `__init__.py`:
 
 ```
-~/.hermes/plugins/my-plugin/
+~/.pace/plugins/my-plugin/
 ├── __init__.py
 ├── plugin.yaml
 └── skills/
@@ -424,13 +424,13 @@ skill_view("my-workflow")              # → built-in version (unchanged)
 ```
 
 **Key properties:**
-- Plugin skills are **read-only** — they don't enter `~/.hermes/skills/` and can't be edited via `skill_manage`.
+- Plugin skills are **read-only** — they don't enter `~/.pace/skills/` and can't be edited via `skill_manage`.
 - Plugin skills are **not** listed in the system prompt's `<available_skills>` index — they're opt-in explicit loads.
 - Bare skill names are unaffected — the namespace prevents collisions with built-in skills.
 - When the agent loads a plugin skill, a bundle context banner is prepended listing sibling skills from the same plugin.
 
 :::tip Legacy pattern
-The old `shutil.copy2` pattern (copying a skill into `~/.hermes/skills/`) still works but creates name collision risk with built-in skills. Prefer `ctx.register_skill()` for new plugins.
+The old `shutil.copy2` pattern (copying a skill into `~/.pace/skills/`) still works but creates name collision risk with built-in skills. Prefer `ctx.register_skill()` for new plugins.
 :::
 
 ### Gate on environment variables
@@ -445,7 +445,7 @@ requires_env:
 
 If `WEATHER_API_KEY` isn't set, the plugin is disabled with a clear message. No crash, no error in the agent — just "Plugin weather disabled (missing: WEATHER_API_KEY)".
 
-When users run `hermes plugins install`, they're **prompted interactively** for any missing `requires_env` variables. Values are saved to `.env` automatically.
+When users run `pace plugins install`, they're **prompted interactively** for any missing `requires_env` variables. Values are saved to `.env` automatically.
 
 For a better install experience, use the rich format with descriptions and signup URLs:
 
@@ -629,7 +629,7 @@ This is the only hook whose return value matters. When a `pre_llm_call` callback
 
 ```python
 # Dict with context key
-return {"context": "Recalled memories:\n- User prefers dark mode\n- Last project: hermes-agent"}
+return {"context": "Recalled memories:\n- User prefers dark mode\n- Last project: pace-agent"}
 
 # Plain string (equivalent to the dict form above)
 return "Recalled memories:\n- User prefers dark mode"
@@ -734,21 +734,21 @@ When multiple plugins return context from `pre_llm_call`, their outputs are join
 
 ### Register CLI commands
 
-Plugins can add their own `hermes <plugin>` subcommand tree:
+Plugins can add their own `pace <plugin>` subcommand tree:
 
 ```python
 def _my_command(args):
-    """Handler for hermes my-plugin <subcommand>."""
+    """Handler for pace my-plugin <subcommand>."""
     sub = getattr(args, "my_command", None)
     if sub == "status":
         print("All good!")
     elif sub == "config":
         print("Current config: ...")
     else:
-        print("Usage: hermes my-plugin <status|config>")
+        print("Usage: pace my-plugin <status|config>")
 
 def _setup_argparse(subparser):
-    """Build the argparse tree for hermes my-plugin."""
+    """Build the argparse tree for pace my-plugin."""
     subs = subparser.add_subparsers(dest="my_command")
     subs.add_parser("status", help="Show plugin status")
     subs.add_parser("config", help="Show plugin config")
@@ -764,7 +764,7 @@ def register(ctx):
     )
 ```
 
-After registration, users can run `hermes my-plugin status`, `hermes my-plugin config`, etc.
+After registration, users can run `pace my-plugin status`, `pace my-plugin config`, etc.
 
 **Memory provider plugins** use a convention-based approach instead: add a `register_cli(subparser)` function to your plugin's `cli.py` file. The memory plugin discovery system finds it automatically — no `ctx.register_cli_command()` call needed. See the [Memory Provider Plugin guide](/developer-guide/memory-provider-plugin#adding-cli-commands) for details.
 
@@ -803,7 +803,7 @@ After registration, users can type `/mystatus` in any session. The command appea
 
 | | `register_command()` | `register_cli_command()` |
 |---|---|---|
-| Invoked as | `/name` in a session | `hermes name` in a terminal |
+| Invoked as | `/name` in a session | `pace name` in a terminal |
 | Where it works | CLI sessions, Telegram, Discord, etc. | Terminal only |
 | Handler receives | Raw args string | argparse `Namespace` |
 | Use case | Diagnostics, status, quick actions | Complex subcommand trees, setup wizards |
@@ -921,7 +921,7 @@ This guide covers **general plugins** (tools, hooks, slash commands, CLI command
 
 ## Specialized plugin types
 
-Hermes has five specialized plugin types beyond the general surface. Each ships as a directory under `plugins/<category>/<name>/` (bundled) or `~/.hermes/plugins/<category>/<name>/` (user). The contract differs by category — pick the one you need, then read its full guide.
+Hermes has five specialized plugin types beyond the general surface. Each ships as a directory under `plugins/<category>/<name>/` (bundled) or `~/.pace/plugins/<category>/<name>/` (user). The contract differs by category — pick the one you need, then read its full guide.
 
 ### Model provider plugins — add an LLM backend
 
@@ -988,7 +988,7 @@ def register(ctx):
         check_fn=check_requirements,
         required_env=["MYPLATFORM_TOKEN"],
         # Auto-populate PlatformConfig.extra from env so env-only setups
-        # show up in `hermes gateway status` without SDK instantiation.
+        # show up in `pace gateway status` without SDK instantiation.
         env_enablement_fn=_env_enablement,
         # Opt in to cron delivery: `deliver=myplatform` routes to this var.
         cron_deliver_env_var="MYPLATFORM_HOME_CHANNEL",
@@ -1118,7 +1118,7 @@ Hermes also accepts extensions that aren't Python plugins at all. These are show
 
 ### MCP servers — register external tools
 
-Model Context Protocol (MCP) servers register their own tools into Hermes without any Python plugin. Declare them in `~/.hermes/config.yaml`:
+Model Context Protocol (MCP) servers register their own tools into Hermes without any Python plugin. Declare them in `~/.pace/config.yaml`:
 
 ```yaml
 mcp_servers:
@@ -1137,10 +1137,10 @@ Hermes connects to each server at startup, lists its tools, and registers them a
 
 ### Gateway event hooks — fire on lifecycle events
 
-Drop a manifest + handler into `~/.hermes/hooks/<name>/`:
+Drop a manifest + handler into `~/.pace/hooks/<name>/`:
 
 ```yaml
-# ~/.hermes/hooks/long-task-alert/HOOK.yaml
+# ~/.pace/hooks/long-task-alert/HOOK.yaml
 name: long-task-alert
 description: Send a push notification when a long task finishes
 events:
@@ -1148,7 +1148,7 @@ events:
 ```
 
 ```python
-# ~/.hermes/hooks/long-task-alert/handler.py
+# ~/.pace/hooks/long-task-alert/handler.py
 async def handle(event_type: str, context: dict) -> None:
     if context.get("duration_seconds", 0) > 120:
         # send notification …
@@ -1180,9 +1180,9 @@ Supports all the same events as Python plugin hooks (`pre_tool_call`, `post_tool
 If you maintain a GitHub repo of skills (or want to pull from a community index beyond the built-in sources), add it as a **tap**:
 
 ```bash
-hermes skills tap add myorg/skills-repo
-hermes skills search my-workflow --source myorg/skills-repo
-hermes skills install myorg/skills-repo/my-workflow
+pace skills tap add myorg/skills-repo
+pace skills search my-workflow --source myorg/skills-repo
+pace skills install myorg/skills-repo/my-workflow
 ```
 
 Publishing your own tap is just a GitHub repo with `skills/<skill-name>/SKILL.md` directories — no server or registry signup needed.
@@ -1220,7 +1220,7 @@ my-plugin = "my_plugin_package"
 
 ```bash
 pip install hermes-plugin-calculator
-# Plugin auto-discovered on next hermes startup
+# Plugin auto-discovered on next pace startup
 ```
 
 ## Distribute for NixOS
@@ -1234,7 +1234,7 @@ NixOS users can install your plugin declaratively if you provide a `pyproject.to
 **Entry-point plugins** (recommended for distribution):
 ```nix
 # User's configuration.nix
-services.hermes-agent.extraPythonPackages = [
+services.pace-agent.extraPythonPackages = [
   (pkgs.python312Packages.buildPythonPackage {
     pname = "my-plugin";
     version = "1.0.0";
@@ -1252,7 +1252,7 @@ services.hermes-agent.extraPythonPackages = [
 
 **Directory plugins** (no `pyproject.toml` needed):
 ```nix
-services.hermes-agent.extraPlugins = [
+services.pace-agent.extraPlugins = [
   (pkgs.fetchFromGitHub {
     owner = "you";
     repo = "hermes-my-plugin";

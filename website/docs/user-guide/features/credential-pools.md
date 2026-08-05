@@ -46,20 +46,20 @@ If you already have an API key set in `.env`, Hermes auto-discovers it as a 1-ke
 
 ```bash
 # Add a second OpenRouter key
-hermes auth add openrouter --api-key sk-or-v1-your-second-key
+pace auth add openrouter --api-key sk-or-v1-your-second-key
 
 # Add a second Anthropic key
-hermes auth add anthropic --type api-key --api-key sk-ant-api03-your-second-key
+pace auth add anthropic --type api-key --api-key sk-ant-api03-your-second-key
 
 # Add an Anthropic OAuth credential (requires Claude Max plan + extra usage credits)
-hermes auth add anthropic --type oauth
+pace auth add anthropic --type oauth
 # Opens browser for OAuth login
 ```
 
 Check your pools:
 
 ```bash
-hermes auth list
+pace auth list
 ```
 
 Output:
@@ -78,10 +78,10 @@ The `←` marks the currently selected credential.
 
 ## Interactive Management
 
-Run `hermes auth` with no subcommand for an interactive wizard:
+Run `pace auth` with no subcommand for an interactive wizard:
 
 ```bash
-hermes auth
+pace auth
 ```
 
 This shows your full pool status and offers a menu:
@@ -108,18 +108,18 @@ Type [1/2]:
 
 | Command | Description |
 |---------|-------------|
-| `hermes auth` | Interactive pool management wizard |
-| `hermes auth list` | Show all pools and credentials |
-| `hermes auth list <provider>` | Show a specific provider's pool |
-| `hermes auth add <provider>` | Add a credential (prompts for type and key) |
-| `hermes auth add <provider> --type api-key --api-key <key>` | Add an API key non-interactively |
-| `hermes auth add <provider> --type oauth` | Add an OAuth credential via browser login |
-| `hermes auth remove <provider> <index>` | Remove credential by 1-based index |
-| `hermes auth reset <provider>` | Clear all cooldowns/exhaustion status |
+| `pace auth` | Interactive pool management wizard |
+| `pace auth list` | Show all pools and credentials |
+| `pace auth list <provider>` | Show a specific provider's pool |
+| `pace auth add <provider>` | Add a credential (prompts for type and key) |
+| `pace auth add <provider> --type api-key --api-key <key>` | Add an API key non-interactively |
+| `pace auth add <provider> --type oauth` | Add an OAuth credential via browser login |
+| `pace auth remove <provider> <index>` | Remove credential by 1-based index |
+| `pace auth reset <provider>` | Clear all cooldowns/exhaustion status |
 
 ## Rotation Strategies
 
-Configure via `hermes auth` → "Set rotation strategy" or in `config.yaml`:
+Configure via `pace auth` → "Set rotation strategy" or in `config.yaml`:
 
 ```yaml
 credential_pool_strategies:
@@ -153,17 +153,17 @@ The `has_retried_429` flag resets on every successful API call, so a single tran
 
 Custom OpenAI-compatible endpoints (Together.ai, RunPod, local servers) get their own pools, keyed by the endpoint name from the `providers:` dict in config.yaml (or the legacy `custom_providers` list, which is auto-migrated).
 
-When you set up a custom endpoint via `hermes model`, it auto-generates a name like "Together.ai" or "Local (localhost:8080)". This name becomes the pool key.
+When you set up a custom endpoint via `pace model`, it auto-generates a name like "Together.ai" or "Local (localhost:8080)". This name becomes the pool key.
 
 ```bash
-# After setting up a custom endpoint via hermes model:
-hermes auth list
+# After setting up a custom endpoint via pace model:
+pace auth list
 # Shows:
 #   Together.ai (1 credential):
 #     #1  config key    api_key config:Together.ai ←
 
 # Add a second key for the same endpoint:
-hermes auth add Together.ai --api-key sk-together-second-key
+pace auth add Together.ai --api-key sk-together-second-key
 ```
 
 Custom endpoint pools are stored in `auth.json` under `credential_pool` with a `custom:` prefix:
@@ -186,11 +186,11 @@ Hermes automatically discovers credentials from multiple sources and seeds the p
 | Environment variables | `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` | Yes |
 | OAuth tokens (auth.json) | Codex device code, Nous device code | Yes |
 | Claude Code credentials | `~/.claude/.credentials.json` | Yes (Anthropic) |
-| Hermes PKCE OAuth | `~/.hermes/auth.json` | Yes (Anthropic) |
+| Hermes PKCE OAuth | `~/.pace/auth.json` | Yes (Anthropic) |
 | Custom endpoint config | `model.api_key` in config.yaml | Yes (custom endpoints) |
-| Manual entries | Added via `hermes auth add` | Persisted in auth.json |
+| Manual entries | Added via `pace auth add` | Persisted in auth.json |
 
-Auto-seeded entries are updated on each pool load — if you remove an env var, its pool entry is automatically pruned. Manual entries (added via `hermes auth add`) are never auto-pruned.
+Auto-seeded entries are updated on each pool load — if you remove an env var, its pool entry is automatically pruned. Manual entries (added via `pace auth add`) are never auto-pruned.
 
 Borrowed runtime secrets (for example env vars, Bitwarden/Vault/keyring/systemd references, and custom config values) are reference-only at the `auth.json` boundary. Hermes can use the resolved value in memory for the current run, but it persists only metadata such as the source ref, label, status, request counters, and a non-reversible fingerprint. Manual entries and Hermes-owned OAuth/device-code state keep the durable tokens they need to refresh.
 
@@ -215,13 +215,13 @@ For the full data flow diagram, see [`docs/credential-pool-flow.excalidraw`](htt
 The credential pool integrates at the provider resolution layer:
 
 1. **`agent/credential_pool.py`** — Pool manager: storage, selection, rotation, cooldowns
-2. **`hermes_cli/auth_commands.py`** — CLI commands and interactive wizard
-3. **`hermes_cli/runtime_provider.py`** — Pool-aware credential resolution
+2. **`pace_cli/auth_commands.py`** — CLI commands and interactive wizard
+3. **`pace_cli/runtime_provider.py`** — Pool-aware credential resolution
 4. **`run_agent.py`** — Error recovery: 429/402/401 → pool rotation → fallback
 
 ## Storage
 
-Pool state is stored in `~/.hermes/auth.json` under the `credential_pool` key:
+Pool state is stored in `~/.pace/auth.json` under the `credential_pool` key:
 
 ```json
 {

@@ -37,14 +37,14 @@ The SMS gateway shares credentials with the optional [telephony skill](/referenc
 ### Interactive setup (recommended)
 
 ```bash
-hermes gateway setup
+pace gateway setup
 ```
 
 Select **SMS (Twilio)** from the platform list. The wizard will prompt for your credentials.
 
 ### Manual setup
 
-Add to `~/.hermes/.env`:
+Add to `~/.pace/.env`:
 
 ```bash
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -102,7 +102,7 @@ SMS_WEBHOOK_PORT=3000
 ## Step 4: Start the Gateway
 
 ```bash
-hermes gateway
+pace gateway
 ```
 
 You should see:
