@@ -12,59 +12,72 @@ PACE Atlas is an AI-powered Site Reliability Engineer that lives inside your clo
 
 ---
 
-## Capabilities (v1.0)
+## What I built vs. what I inherited
 
-| Capability | What it does |
+PACE Atlas is a fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent) — but the two layers are deliberately separate, and only one of them is this project's contribution.
+
+### Built here: the resident SRE agent (`pace_atlas/`)
+
+This entire package is original to this fork — **upstream Hermes Agent has no `pace_atlas/` at all** (all 5,455 lines, authored in this repo, plus the agent-core additions below). This is the submission-worthy core.
+
+| Module | What it does |
 |-----------|-------------|
-| **Telemetry collection** | CPU, memory, disk, network, process, security, cloud, and log telemetry (`pace_atlas/telemetry/`) |
-| **Alert engine** | Hard-rule alerts with an LLM decision layer — context, patterns, correlation, not just thresholds (`pace_atlas/alert_engine/`) |
-| **Root cause analysis** | Chain-of-causation analysis with prevention guidance |
-| **Security intelligence** | Attack-pattern recognition and threat-level assessment |
-| **Cost optimization** | Flags idle resources and over-provisioning |
-| **Predictive analysis** | Trend detection and forecasting |
-| **Feedback learning** | Improves from every alert and interaction (`pace_atlas/feedback/`) |
+| **Telemetry collection** | 8 collectors — CPU, memory, disk, network, process, security, cloud, logs (`pace_atlas/telemetry/`) |
+| **Alert engine** | Hard-rule alerts + an **LLM decision layer** that reads the same telemetry and decides with context, pattern correlation, and severity judgment instead of raw thresholds (`pace_atlas/alert_engine/`) |
+| **Root cause analysis** | Chain-of-causation analysis with prevention guidance (`pace_atlas/capabilities.py`) |
+| **Security intelligence** | Attack-pattern recognition, threat-level assessment of SSH/network/log events |
+| **Cost optimization** | Flags idle resources and over-provisioning against live cloud billing data |
+| **Predictive analysis** | Trend detection, rate-of-change, and forecast-to-threshold projections |
+| **Feedback learning** | Improves from every alert and interaction — mute patterns, adjust thresholds (`pace_atlas/feedback/`) |
 | **Interactive Q&A** | Ask about your infrastructure in plain language |
+| **Config layer** | Layered config (defaults < file < env < CLI), provider auto-detect from Groq/OpenAI/Anthropic keys (`pace_atlas/config.py`) |
+| **Notification fan-out** | Console, file, webhook, Telegram, email channels with failure isolation (`pace_atlas/notify.py`) |
+| **Alert history ledger** | Append-only JSONL with repeat-alert suppression windows and trend history (`pace_atlas/history.py`) |
+| **Resident runner** | Daemon lifecycle — pidfile, SIGTERM/SIGINT, dedupe windows, `--install` / `--install-systemd` / `--status` (`pace_atlas/runner.py`) |
 
-### Architecture
+This agent is also published standalone: **`pip install pace-atlas`** → `pace-atlas --daemon` — no Hermes runtime required.
+
+### Inherited: the agent runtime (everything else)
+
+Because the fork keeps the upstream runtime, PACE Atlas also ships Hermes Agent's infrastructure — **none of this was written here**, it came with the fork:
+
+- **Agent core** — conversation loop, tool orchestration, model providers (`run_agent.py`, `model_tools.py`)
+- **Messaging gateway** — Telegram, Discord, Slack, WhatsApp, Signal, ~20 platforms (`gateway/`)
+- **CLI / TUI / desktop** — interactive shells, skins, dashboard (`pace_cli/`, `ui-tui/`, `apps/desktop/`)
+- **Memory & skills** — session storage, skill hub, curator (`hermes_state.py`, `skills/`, `plugins/`)
+- **Automation** — cron scheduler, delegation, kanban board (`cron/`, `tools/`, `plugins/kanban/`)
+
+### At a glance (diff vs. upstream `main`)
 
 ```
-Telemetry → Atlas Capabilities → Smart Alert / Insight / Forecast / RCA
-                    ↓
-         Full LLM Knowledge + Personality
-         (not just threshold checking)
+pace_atlas/          21 files, ~6,000 lines added   ← the contribution (not in upstream)
+config.py, notify.py, history.py, runner.py, tests   ← agent-core work, added on top
+total fork diff:     393 files changed, 54,758 insertions, 9,512 deletions
+                     (mostly the rebrand pass over docs/CLI/gateway strings)
 ```
 
-- Identity: AI SRE engineer with 15+ years of experience
-- Telemetry analysis: context, patterns, correlation
-- Security excellence: attack recognition, threat levels
-- Cost excellence: idle resources, over-provisioning
-- RCA excellence: chain of causation, prevention
-
----
-
-## Also on board
-
-Because PACE Atlas inherits the full agent runtime it was forked from, you also get:
-
-- **Terminal interface** — full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, streaming tool output
-- **Lives where you do** — Telegram, Discord, Slack, WhatsApp, Signal, and CLI, all from a single gateway process
-- **Closed learning loop** — agent-curated memory, autonomous skill creation, FTS5 session search with LLM summarization
-- **Scheduled automations** — built-in cron with natural-language schedules and delivery to any platform
-- **Delegation** — parallel subagents with isolated contexts
-- **Runs anywhere** — local, Docker, SSH, Modal, or a $5 VPS
+Full account: [`REBRAND_LOG.md`](REBRAND_LOG.md) — including what each `pace_atlas/` module does, which commits added it, and what the diff against upstream really is.
 
 ---
 
 ## Quick start
 
-PACE Atlas isn't published to PyPI yet — install from source:
-
 ```bash
+pip install pace-atlas        # standalone agent — or run from this repo:
+
 git clone https://github.com/sohamvjadhav/pace-atlas
 cd pace-atlas
 uv sync            # or: python -m venv venv && pip install -e .
 pace setup         # one-time configuration
 pace               # start PACE Atlas CLI
+```
+
+The resident agent (from `pace_atlas/`):
+
+```bash
+pace-atlas --install        # write ~/.pace/config.yaml
+pace-atlas --daemon         # monitor every 5 minutes
+pace-atlas --status         # health summary
 ```
 
 ### Commands
@@ -96,13 +109,13 @@ Use any model you want — OpenRouter (200+ models), OpenAI, Anthropic, Google, 
 ## Documentation
 
 - `docs/architecture.md` — system architecture and design
-- `REBRAND_LOG.md` — history of the PACE Atlas fork and its changes
+- `REBRAND_LOG.md` — what this fork changed vs. upstream, with the full contribution diff
 
 ---
 
 ## Acknowledgements
 
-PACE Atlas is a fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent) by [Nous Research](https://nousresearch.com) — kept the core runtime, rebranded and extended for infrastructure operations, in the same spirit as Cursor forking VS Code.
+PACE Atlas is a fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent) by [Nous Research](https://nousresearch.com) — kept the runtime, built the `pace_atlas/` SRE agent on top, in the same spirit as Cursor forking VS Code. All `pace_atlas/` code is original to this fork.
 
 ---
 

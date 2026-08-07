@@ -2,7 +2,7 @@
 
 ## Overview
 Date: 2025-04-05
-Purpose: Full rebrand from Hermes Agent to PACE Atlas
+Purpose: Full rebrand from Hermes Agent to PACE Atlas + build the resident SRE agent
 Reference: Like Cursor (forked VS Code) - kept core, hidden original branding
 Status: ✅ COMPLETED
 
@@ -95,6 +95,67 @@ Telemetry → Atlas Capabilities → Smart Alert/Insight/Forecast/RCA
 - Cost Excellence: Idle resources, over-provisioning
 - RCA Excellence: Chain of causation, prevention
 
+---
+
+# Contribution Summary (what is actually ours)
+
+## Provenance
+
+- **`pace_atlas/` is original to this fork.** Upstream
+  `NousResearch/hermes-agent` has no `pace_atlas/` directory at all.
+  All files under it were authored here (`git log` shows only fork commits;
+  added in `cf6562857`, "rebrand to PACE Atlas").
+- **Everything else is inherited upstream code**, rebranded: `pace_cli/`,
+  `gateway/`, prompts, docs, and the agent runtime. None of that is a
+  contribution; it is the fork base.
+
+## Diff against upstream `main`
+
+Measured `upstream/main...main` (the full fork):
+
+```
+393 files changed, 54,758 insertions(+), 9,512 deletions(-)
+```
+
+Breakdown:
+
+| Scope | Size | Nature |
+|-------|------|--------|
+| `pace_atlas/` | 21 files, +6,012 | **Original contribution** — telemetry, alert engine, capabilities, runner |
+| `pace_atlas/` agent-core additions | `config.py`, `notify.py`, `history.py`, `config.example.yaml` + `tests/pace_atlas/` (26 tests) | **Original contribution** (commit `c4b3e99c8`) |
+| `pace_cli/`, `gateway/`, prompts, docs, website | ~370 files | Rebrand pass — string/name replacements on upstream code |
+| `assets/banner.png` | 1 file | Replacement branding |
+
+The agent-core additions (commit `c4b3e99c8`) are the most recent, standalone
+piece of work: layered config with env inference, notification fan-out,
+append-only alert history with repeat suppression, and a full `runner.py`
+rebuild (daemon lifecycle, pidfile, signal handling, `--install-systemd`,
+`--status`). 26 unit tests cover config/notify/history.
+
+## Per-file breakdown of the contribution (`pace_atlas/`)
+
+| File | Lines | What it is |
+|------|-------|-----------|
+| `telemetry/base.py` | 358 | `TelemetryCollector` ABC, `TelemetrySnapshot`, `CompositeCollector` |
+| `telemetry/system.py` | 272 | CPU/load from `/proc` |
+| `telemetry/memory.py` | 182 | `/proc/meminfo` reader |
+| `telemetry/disk.py` | 246 | mounts, usage, inodes |
+| `telemetry/network.py` | 252 | connections, TCP state |
+| `telemetry/process.py` | 226 | process stats |
+| `telemetry/security.py` | 296 | auth/SSH event collection |
+| `telemetry/cloud.py` | 289 | cloud metadata + billing |
+| `telemetry/logs.py` | 238 | log aggregation |
+| `alert_engine/__init__.py` | 522 | `HardRules` thresholds, `AlertEngine` with LLM decision layer |
+| `capabilities.py` | 623 | RCA, security, cost, predictive analyzers, interactive Q&A |
+| `feedback/__init__.py` | 355 | alert feedback learning |
+| `tools.py` | 758 | SRE tool surface for the agent runtime |
+| `agent_runner.py` | 333 | agent-mode runner |
+| `runner.py` | 344 | **rebuilt**: daemon, lifecycle, dedupe, notifications, `--install`/`--status` |
+| `config.py` | 180 | *new*: YAML, env/.env inference, provider auto-detect |
+| `notify.py` | 198 | *new*: console/file/webhook/telegram/email channels |
+| `history.py` | 145 | *new*: JSONL ledger, repeat suppression, trends |
+
 ## Version History
 - 0.1.0: Initial PACE Atlas with basic telemetry + hard rules
 - 1.0.0: Complete SRE agent with all capabilities
+- 0.1.0 (PyPI `pace-atlas`): slim standalone wheel of the agent — `pip install pace-atlas`
