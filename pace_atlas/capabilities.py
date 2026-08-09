@@ -72,7 +72,7 @@ class HistoryTracker:
     def _load_history(self) -> dict:
         """Load history from disk."""
         try:
-            with open(self.history_file, "r") as f:
+            with open(self.history_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return {}
@@ -80,7 +80,7 @@ class HistoryTracker:
     def save(self):
         """Save history to disk."""
         try:
-            with open(self.history_file, "w") as f:
+            with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(self.history, f)
         except:
             pass

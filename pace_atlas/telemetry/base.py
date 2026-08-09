@@ -163,7 +163,7 @@ class TelemetryCollector(ABC):
             File contents or None if failed
         """
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 lines = []
                 for i, line in enumerate(f):
                     if i >= max_lines:

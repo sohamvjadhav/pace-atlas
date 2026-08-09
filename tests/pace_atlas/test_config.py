@@ -64,6 +64,15 @@ def test_dotenv_never_overrides_explicit_env(monkeypatch, tmp_path):
     assert cfg["llm"]["api_key"] == "sk-real"
 
 
+def test_explicit_provider_still_pulls_key_from_env(monkeypatch, tmp_path):
+    """Config says provider: openai but key lives in env — must be resolved."""
+    monkeypatch.setenv("PACE_HOME", str(tmp_path))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env")
+    cfg = config.load_config(overrides={"llm": {"provider": "openai", "model": "gpt-4o-mini"}})
+    assert cfg["llm"]["api_key"] == "sk-from-env"
+    assert cfg["llm"]["provider"] == "openai"
+
+
 def test_install_default_config(monkeypatch, tmp_path):
     monkeypatch.setenv("PACE_HOME", str(tmp_path))
     path = config.install_default_config()

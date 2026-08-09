@@ -48,7 +48,7 @@ class CloudCollector(TelemetryCollector):
         # Check for AWS
         if os.path.exists("/sys/hypervisor/uuid"):
             try:
-                with open("/sys/hypervisor/uuid", "r") as f:
+                with open("/sys/hypervisor/uuid", "r", encoding="utf-8") as f:
                     if f.read().startswith("ec2"):
                         return "aws"
             except Exception:

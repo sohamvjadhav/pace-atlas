@@ -269,9 +269,11 @@ class AlertEngine:
         self.llm_client = None  # Set by set_llm_client()
         self.feedback = None  # Set by set_feedback()
 
-    def set_llm_client(self, client) -> None:
+    def set_llm_client(self, client, model: str = None, max_tokens: int = 500) -> None:
         """Set the LLM client for intelligent decisions."""
         self.llm_client = client
+        self.llm_model = model or "llama-3.3-70b-versatile"
+        self.llm_max_tokens = max_tokens
 
     def set_feedback(self, feedback_system) -> None:
         """Set the feedback learning system."""
@@ -319,9 +321,9 @@ class AlertEngine:
 
             # Get LLM response (OpenAI-style client)
             response = self.llm_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=getattr(self, "llm_model", "llama-3.3-70b-versatile"),
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=500,
+                max_tokens=getattr(self, "llm_max_tokens", 500),
             )
             llm_response = response.choices[0].message.content
 

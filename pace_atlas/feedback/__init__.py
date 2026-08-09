@@ -217,7 +217,7 @@ class FeedbackLearning:
             return []
 
         try:
-            with open(self.feedback_file, "r") as f:
+            with open(self.feedback_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return [
                     FeedbackEntry(
@@ -246,7 +246,7 @@ class FeedbackLearning:
                 for e in self.feedback_history[-1000:]  # Keep last 1000
             ]
 
-            with open(self.feedback_file, "w") as f:
+            with open(self.feedback_file, "w", encoding="utf-8") as f:
                 json.dump(data, f)
         except Exception:
             pass
@@ -257,7 +257,7 @@ class FeedbackLearning:
             return {}
 
         try:
-            with open(self.stats_file, "r") as f:
+            with open(self.stats_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return {
                     k: AlertTypeStats(**v) if isinstance(v, dict) else v
@@ -274,7 +274,7 @@ class FeedbackLearning:
                 for k, v in self.alert_stats.items()
             }
 
-            with open(self.stats_file, "w") as f:
+            with open(self.stats_file, "w", encoding="utf-8") as f:
                 json.dump(data, f)
         except Exception:
             pass

@@ -71,7 +71,12 @@ class PACEAtlas:
         self.capabilities = AtlasCapabilities(str(self.home))
         self.llm_client = self._setup_llm_client()
         if self.llm_client:
-            self.alert_engine.set_llm_client(self.llm_client)
+            max_tokens = self.config.get("llm", {}).get("max_tokens", 500)
+            self.alert_engine.set_llm_client(
+                self.llm_client,
+                model=self._llm_model,
+                max_tokens=max_tokens,
+            )
 
         alerts_cfg = self.config.get("alerts", {})
         history_path = alerts_cfg.get("history_file") or str(self.home / "history.jsonl")

@@ -100,7 +100,7 @@ class PACEAtlasAgent:
         if not api_key:
             env_file = Path.home() / ".pace" / ".env"
             if env_file.exists():
-                with open(env_file) as f:
+                with open(env_file, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line or line.startswith("#"):
@@ -151,7 +151,7 @@ class PACEAtlasAgent:
         """Get API key from config."""
         env_file = self.config_dir / ".env"
         if env_file.exists():
-            with open(env_file) as f:
+            with open(env_file, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith("#"):

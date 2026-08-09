@@ -101,6 +101,7 @@ def resolve_llm_settings(config: dict) -> dict:
 
     llm = dict(config.get("llm") or {})
 
+    # 1. Infer provider + key from env when no provider is set.
     if not llm.get("provider"):
         for provider, key in (
             ("groq", "GROQ_API_KEY"),
@@ -111,6 +112,17 @@ def resolve_llm_settings(config: dict) -> dict:
                 llm["provider"] = provider
                 llm["api_key"] = env[key]
                 break
+
+    # 2. A provider set explicitly in config still needs its key from
+    #    env/.env when api_key wasn't written to the file (never store keys).
+    if llm.get("provider") and not llm.get("api_key"):
+        key = {
+            "groq": "GROQ_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+        }.get(llm["provider"])
+        if key and env.get(key):
+            llm["api_key"] = env[key]
 
     if not llm.get("model"):
         defaults = {
