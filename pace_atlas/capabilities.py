@@ -527,21 +527,57 @@ class InteractiveQA:
     def __init__(self):
         pass
 
+    def __init__(self, llm_client=None, model: str = None):
+        self.llm_client = llm_client
+        self.model = model or "llama-3.3-70b-versatile"
+
     def answer(self, question: str, telemetry: dict, logs: str) -> AnalysisResult:
         """
-        Answer a user question.
+        Answer a user question using the configured LLM when available.
 
-        This would call the LLM with the Q&A prompt.
+        Falls back to a static response when no LLM client is configured.
         """
-        # This would integrate with the LLM
-        return AnalysisResult(
-            result_type="qa",
-            severity="info",
-            title="Answer",
-            body=f"Question: {question}\n\n"
-            f"Use prompts.atlas_complete.build_qa_prompt() with LLM",
-            recommendations=[],
-        )
+        if self.llm_client is None:
+            return AnalysisResult(
+                result_type="qa",
+                severity="info",
+                title="Answer",
+                body=f"Question: {question}\n\n"
+                f"Use prompts.atlas_complete.build_qa_prompt() with LLM",
+                recommendations=[],
+            )
+
+        try:
+            telemetry_str = "\n".join(
+                f"{k}: {v}" for k, v in telemetry.items() if v
+            )
+            prompt = (
+                f"You are Atlas, a senior SRE. Answer this infrastructure "
+                f"question concisely and directly: {question}\n\n"
+                f"Current telemetry:\n{telemetry_str}"
+            )
+            response = self.llm_client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500,
+            )
+            answer = response.choices[0].message.content
+            return AnalysisResult(
+                result_type="qa",
+                severity="info",
+                title=f"Answer: {question[:60]}",
+                body=answer,
+                recommendations=[],
+            )
+        except Exception as exc:
+            return AnalysisResult(
+                result_type="qa",
+                severity="info",
+                title="Answer (LLM unavailable)",
+                body=f"LLM Q&A failed ({exc}). Answering statically:\n"
+                f"Question: {question}",
+                recommendations=[],
+            )
 
 
 # =============================================================================
@@ -554,13 +590,13 @@ class AtlasCapabilities:
     Main orchestrator for all Atlas advanced capabilities.
     """
 
-    def __init__(self, config_dir: str):
+    def __init__(self, config_dir: str, llm_client=None, model: str = None):
         self.history = HistoryTracker(config_dir)
         self.rca = RootCauseAnalyzer()
         self.security = SecurityAnalyzer()
         self.cost = CostAnalyzer()
         self.predictive = PredictiveAnalyzer(self.history)
-        self.qa = InteractiveQA()
+        self.qa = InteractiveQA(llm_client=llm_client, model=model)
 
     def run_full_analysis(
         self, telemetry: dict, logs: str = "", feedback_context: dict = None

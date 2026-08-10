@@ -68,8 +68,12 @@ class PACEAtlas:
         self.feedback = FeedbackLearning(str(self.home))
         self.alert_engine.set_feedback(self.feedback)
 
-        self.capabilities = AtlasCapabilities(str(self.home))
         self.llm_client = self._setup_llm_client()
+        self.capabilities = AtlasCapabilities(
+            str(self.home),
+            llm_client=self.llm_client,
+            model=getattr(self, "_llm_model", None),
+        )
         if self.llm_client:
             max_tokens = self.config.get("llm", {}).get("max_tokens", 500)
             self.alert_engine.set_llm_client(
