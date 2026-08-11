@@ -593,7 +593,7 @@ def check_cloud_status(**_: Any) -> str:
 
 
 _BLOCKED_DIAGNOSTIC_PATTERN = re.compile(
-    r"(rm\s+-rf|mkfs(\.[a-z0-9]+)?|\breboot\b|\bshutdown\b|\bpoweroff\b|\bhalt\b|dd\s+if=|:\(\)\s*\{\s*:\|:&\s*;\s*\}\s*;:)",
+    r"(rm\s+-rf|mkfs(\.[a-z0-9]+)?|\breboot\b|\bshutdown\b|\bpoweroff\b|\bhalt\b|dd\s+if=|:\(\)\s*\{|:\s*\(\)\s*\{)",
     re.IGNORECASE,
 )
 
