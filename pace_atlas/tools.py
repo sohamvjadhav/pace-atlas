@@ -63,7 +63,12 @@ def _register_tool(
     function: Callable[..., str],
 ) -> None:
     """Register a pace tool with a registry-compatible wrapper."""
-    from tools.registry import registry
+    try:
+        from tools.registry import registry
+    except ModuleNotFoundError:
+        # Standalone use (PyPI wheel / scripts): the hermes tools registry is
+        # not installed, so registration is skipped without failing import.
+        return
 
     def _handler(args: dict[str, Any] | None, **kwargs: Any) -> str:
         payload: dict[str, Any] = {}
